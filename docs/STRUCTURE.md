@@ -5,7 +5,7 @@ repository.
 
 | Blueprint folder | Repository path | Status | Notes |
 | ---------------- | --------------- | ------ | ----- |
-| `client/`     | `client/`     | Skeleton    | Unity 6 LTS project; needs one Editor open to finish generating |
+| `client/`     | `client/`     | Active      | TypeScript web client (Vite); Android via Capacitor |
 | `server/`     | `server/`     | Active      | NestJS gateway + Colyseus realtime server |
 | `backend/`    | `server/`     | Merged      | Deliberately not a second folder — see below |
 | `shared/`     | `shared/`     | Placeholder | Client/server contracts — filled in Issue 3.2 |
@@ -16,7 +16,7 @@ repository.
 | `.github/`    | `.github/`    | Active      | CI workflows |
 | `scripts/`    | `scripts/`    | Active      | Developer helper scripts |
 | `assets/`     | `assets/`     | Placeholder | `ui/`, `audio/`, `video/`, `animations/` |
-| `tests/`      | `tests/`      | Active      | Rules engine test project; integration and load tests to come |
+| `tests/`      | `tests/`      | Placeholder | Cross-component integration and load tests |
 
 ## Why there is no separate `backend/`
 

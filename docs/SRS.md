@@ -17,7 +17,7 @@ LudoVerse is a production-grade online multiplayer Ludo platform supporting up t
 - **AI**: Offline and adaptive difficulty bots, smart dice prediction, cheat/AFK detection.
 
 ## 4. Technical Constraints
-- **Client Engine**: Unity 6 LTS (120 FPS target, strict memory/asset streaming).
+- **Client**: TypeScript web app (Vite), 60 FPS target, wrapped to Android with Capacitor.
 - **Backend**: Node.js + NestJS with Colyseus for real-time multiplayer.
 - **Data**: PostgreSQL (Persistence) + Redis (State/Cache).
 - **Authentication**: Firebase Auth (Token-based).
@@ -27,4 +27,4 @@ LudoVerse is a production-grade online multiplayer Ludo platform supporting up t
 - **Scalability**: Must support concurrent rooms via distributed Colyseus instances and Redis pub/sub.
 - **Reliability**: Automatic reconnection after internet loss.
 - **Security**: JWT encryption, authoritative server movement validation, voice/chat moderation.
-- **Performance**: High FPS client (DOTween animations, Kawase Blur), low latency server (< 100ms ping).
+- **Performance**: High FPS client (CSS/Canvas animation, blurred-glass surfaces), low latency server (< 100ms ping).

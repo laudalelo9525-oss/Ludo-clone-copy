@@ -10,11 +10,11 @@ This document outlines the project milestones and granular issues to be tracked 
 - [x] **Issue 1.2**: Generate Architecture Documents (SRS, SDD, API Contracts).
 - [x] **Issue 1.3**: Set up local DevOps (Docker Compose, GitHub Actions).
 - [x] **Issue 1.4**: Scaffold NestJS + Colyseus Backend.
-- [x] **Issue 1.5**: Initialize Unity 6 Client skeleton and asset structure.
-      Project skeleton, package manifest, assembly layout, bootstrap scripts and
-      editor tooling are committed. Unity itself must be opened once to generate
-      `.meta` files, the scenes and the remaining `ProjectSettings/` assets — see
-      `client/README.md`.
+- [x] **Issue 1.5**: Initialize the client skeleton and asset structure.
+      **Unity was dropped** — its Editor does not run on Android, the only
+      available development machine. Replaced by a TypeScript web client
+      (Vite), which is written and previewed on the phone, verified in CI, and
+      wraps to an Android APK via Capacitor. See `client/README.md`.
 
 ### Phase 1 hardening pass (Claude Code review of the scaffold)
 The scaffold was reviewed against the blueprint in `README.md` and brought up to
@@ -33,29 +33,27 @@ production standard:
 ---
 
 ## 🟡 Phase 2: Core Gameplay (Claude Code)
-**Objective:** Implement the offline board logic and rules engine in Unity.
-- [ ] **Issue 2.1**: Implement the Ludo Board UI and grid system (Unity).
+**Objective:** Implement the board logic, rules engine and board UI.
+- [ ] **Issue 2.1**: Implement the Ludo Board UI and grid system (client).
+      *(Grid geometry done in `client/src/game/board-geometry.ts`; the playable
+      board UI is not.)*
 - [x] **Issue 2.2**: Create the Pawn movement logic and pathfinding.
-- [ ] **Issue 2.3**: Implement the Dice RNG and physics animation. *(RNG done —
-      `SeededDiceRoller`; the physics animation is scene work.)*
+- [ ] **Issue 2.3**: Implement the Dice RNG and animation. *(RNG done and
+      authoritative — `SecureDiceRoller` on the server; the animation is
+      client work.)*
 - [x] **Issue 2.4**: Build the turn-based state machine (Turn -> Roll -> Move -> Check Win).
 - [x] **Issue 2.5**: Add game rules (Safe zones, capturing pawns, winning).
 - [x] **Issue 2.6**: Implement offline Undo feature.
 
 ### Rules engine notes
-The engine lives in `client/Assets/Scripts/Gameplay/` and holds **no UnityEngine
-references** (enforced by `noEngineReferences` on its asmdef). That serves
-offline play in the Unity client and the Phase 6 AI opponent from one
-implementation, and lets it be tested without an Editor.
+The rules live **only on the server** (`server/src/game/rules/`), which
+validates every move. When Unity was dropped, the parallel C# engine and its AI
+went with it: a TypeScript client shares the server's implementation rather than
+duplicating it, which removes the client/server drift risk entirely. That code
+remains in git history if it is ever wanted for a .NET client.
 
-It is **not** the authoritative implementation for online play: the game server
-is TypeScript and mirrors these rules itself (done in Issue 3.4, see
-`server/src/game/rules/`). Both implementations are pinned to
-`shared/board-constants.json` so neither can drift unnoticed.
-
-Because it is engine-agnostic, CI verifies it with `dotnet test` — no Unity
-licence needed — while the same test files also run in the Editor's Test Runner.
-See `tests/README.md`.
+`shared/board-constants.json` is still the source of truth for board geometry;
+the server asserts against it, and so does the client's rendering grid.
 
 Classic rules covered: leaving the yard on a six, exact roll to reach home,
 capture on unprotected cells, the eight safe cells, extra turn on a six or a
@@ -63,15 +61,15 @@ capture or reaching home, three sixes forfeiting the turn, and win detection.
 Blocking (two pawns barring a cell) is left to Custom Rules and is not
 implemented.
 
-Still open in this phase: the board and pawn visuals, dice physics and
-animations, and wiring the engine to the scenes — all of which need the Unity
-Editor (see Issue 1.5).
+Still open in this phase: the board and pawn visuals, dice animation, and
+wiring the client to a live match. The client now renders the board grid; see
+`client/README.md`.
 
 ---
 
 ## 🟠 Phase 3: Online Multiplayer (Claude Code)
 **Objective:** Real-time multiplayer synchronization using Colyseus.
-- [ ] **Issue 3.1**: Integrate Firebase Auth in Unity and NestJS.
+- [ ] **Issue 3.1**: Integrate Firebase Auth in the client and NestJS.
 - [x] **Issue 3.2**: Create Colyseus `LudoRoom` state schema on the backend.
 - [ ] **Issue 3.3**: Implement client-side Colyseus connection and state sync.
 - [x] **Issue 3.4**: Move dice RNG and move validation to the authoritative server.
@@ -106,20 +104,19 @@ Client messages carry no state: `MOVE_PAWN` names a pawn index and nothing
 else, and anything out of turn, out of phase, or not in the server's legal move
 list is answered with `ON_REJECTED` while the board stays untouched.
 
-Because the server is TypeScript and the offline engine is C#, the rules exist
-twice. Both are pinned to `shared/board-constants.json`, and both test suites
-fail if either drifts — verified by deliberately changing a constant and
-watching each suite go red.
+The rules exist once, here. The client renders and asks; it never decides, so
+there is no second implementation to drift. `shared/board-constants.json`
+remains the source of truth for board geometry, asserted by the server's tests
+and by the client's grid tests.
 
-Rules parity with the offline engine is covered by mirrored test suites. What
-the server does **not** have yet: persistence and auth (Issue 3.1).
+What the server does **not** have yet: persistence and auth (Issue 3.1).
 
 ---
 
 ## 🔵 Phase 4: Voice & Video (Claude Code)
 **Objective:** Integrate LiveKit for real-time media.
 - [ ] **Issue 4.1**: Set up LiveKit Server integration on NestJS (Token generation).
-- [ ] **Issue 4.2**: Integrate LiveKit Unity SDK.
+- [ ] **Issue 4.2**: Integrate the LiveKit web SDK in the client.
 - [ ] **Issue 4.3**: Implement Voice Chat (Push-to-talk, muting, noise suppression).
 - [ ] **Issue 4.4**: Implement Video Chat (Picture-in-Picture, Camera toggles).
 
@@ -130,18 +127,25 @@ the server does **not** have yet: persistence and auth (Issue 3.1).
 - [ ] **Issue 5.1**: Implement PostgreSQL Prisma/TypeORM models in NestJS.
 - [ ] **Issue 5.2**: Build Friends system (Add, Accept, Remove) and Presence via Redis.
 - [ ] **Issue 5.3**: Create Global and Friends Leaderboard APIs.
-- [ ] **Issue 5.4**: Implement Player Profiles and Match History UI in Unity.
+- [ ] **Issue 5.4**: Implement Player Profiles and Match History UI in the client.
 - [ ] **Issue 5.5**: Add in-game Text Chat and Emotes.
 
 ---
 
 ## 🔴 Phase 6: Monetization & AI (Claude Code)
 **Objective:** Shop, passes, and bot logic.
-- [x] **Issue 6.1**: Implement Offline AI opponent (Easy/Medium/Hard).
+- [ ] **Issue 6.1**: Implement Offline AI opponent (Easy/Medium/Hard).
+      *(Was done in C#; removed with Unity. Needs redoing in TypeScript — the
+      server's `bot.ts` is a working starting point.)*
 
 ### AI opponent notes
-Lives in `client/Assets/Scripts/Gameplay/AI/`, on top of the rules engine and
-under the same no-UnityEngine rule, so CI tests it without an Editor.
+**The offline C# AI was removed with Unity.** The surviving implementation is
+the server's auto-play bot (`server/src/game/rules/bot.ts`, Issue 6.2), which
+mirrors the same considerations. An offline opponent for the web client is
+still to be written, in TypeScript, on top of the server's rules module.
+
+The original C# opponent, and the measured difficulty ladder below, are in git
+history (commit `f83d491`).
 
 Difficulty is expressed as *what an opponent is blind to*, not as search depth:
 
@@ -193,7 +197,7 @@ sync.
 
 ## ⚫ Phase 7: Quality & Release
 **Objective:** Polish, testing, and deployment.
-- [ ] **Issue 7.1**: DOTween UI Polish and Kawase Blur implementations.
-- [ ] **Issue 7.2**: Implement FMOD/Unity Audio Manager and SFX.
+- [ ] **Issue 7.1**: UI motion polish and blurred-glass surfaces.
+- [ ] **Issue 7.2**: Implement an audio manager and SFX (Web Audio).
 - [ ] **Issue 7.3**: Memory profiling, Object Pooling, and 120 FPS optimization.
 - [ ] **Issue 7.4**: Final deployment to production infrastructure.

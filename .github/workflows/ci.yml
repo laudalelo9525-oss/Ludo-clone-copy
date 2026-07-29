@@ -47,22 +47,33 @@ jobs:
       - name: Build
         run: npm run build
 
-  rules-engine:
-    name: Rules engine (dotnet test)
+  client:
+    name: Client (test, build)
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./client
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          dotnet-version: '8.0.x'
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: client/package-lock.json
 
-      # The gameplay logic carries no UnityEngine references, so it is compiled
-      # and tested here without a Unity installation or licence. The same files
-      # also run inside the Editor's Test Runner.
-      - name: Test
-        run: dotnet test tests/RulesEngine/LudoVerse.Rules.Tests.csproj --verbosity minimal
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Tests
+        run: npm run test
+
+      - name: Build
+        run: npm run build
 
   docker:
     name: Docker compose config
@@ -75,19 +86,3 @@ jobs:
 
       - name: Build backend image
         run: docker build -f docker/Dockerfile -t ludoverse-server:ci .
-
-  # Unity client build. The project skeleton exists (Issue 1.5), but this job
-  # stays disabled until two things are true:
-  #   1. UNITY_LICENSE / UNITY_EMAIL / UNITY_PASSWORD repository secrets exist.
-  #   2. The project has been opened once in the Editor so the generated .meta
-  #      files, scenes and ProjectSettings assets are committed.
-  # Enabling it before then produces a red build on every push.
-  # unity-build:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - name: Build Unity Client
-  #       uses: game-ci/unity-builder@v4
-  #       with:
-  #         projectPath: ./client
-  #         targetPlatform: WebGL

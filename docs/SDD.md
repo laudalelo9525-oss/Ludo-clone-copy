@@ -5,7 +5,7 @@ LudoVerse utilizes a microservices-inspired architecture with an authoritative r
 
 ```mermaid
 graph TD
-    Client[Unity 6 Client] --> Gateway[API Gateway / Load Balancer]
+    Client[Web Client TypeScript] --> Gateway[API Gateway / Load Balancer]
     Gateway --> Auth[Firebase Auth]
     Gateway --> Lobby[NestJS Lobby & Matchmaking]
     Gateway --> Colyseus[Colyseus Game Server]
@@ -15,7 +15,7 @@ graph TD
 ```
 
 ## 2. Component Details
-- **Unity 6 Client**: Handles rendering, UI/UX (Glassmorphism, DOTween), audio (FMOD/Unity), and network synchronization (Colyseus Client).
+- **Web Client (TypeScript/Vite)**: Handles rendering, UI/UX (glassmorphism, CSS/Canvas motion), audio (Web Audio), and network synchronization (colyseus.js). Wraps to Android via Capacitor. Unity was dropped because its Editor does not run on Android; see `docs/HANDOFF.md`.
 - **Gateway/API**: Built with NestJS. Handles user profiles, economy, shop, leaderboards, and matchmaking ticket generation.
 - **Colyseus Game Server**: Handles strict authoritative gameplay. Move validation, dice roll generation (server-side RNG), turn timers, and win states.
 - **LiveKit Server**: Manages WebRTC UDP streams for low-latency voice and video chat.
@@ -26,5 +26,5 @@ graph TD
 `Lobby -> Matchmaking -> Loading -> Dice Roll -> Player Turn -> Move Validation -> Animation -> Win Check -> Reward -> Exit`
 
 ## 4. Design Patterns
-- **Client**: Dependency Injection (VContainer), Async/Await (UniTask), Object Pooling.
+- **Client**: Module-scoped state, async/await, and pooled DOM/Canvas nodes.
 - **Backend**: CQRS, Repository Pattern (TypeORM/Prisma), Event-Driven architecture for real-time state.

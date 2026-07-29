@@ -56,3 +56,6 @@ coverage/
 
 # Windows
 Thumbs.db
+
+# Client build output
+client/dist/

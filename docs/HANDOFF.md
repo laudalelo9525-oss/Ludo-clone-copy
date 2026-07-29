@@ -8,41 +8,22 @@ checklist; this is the context around it.
 
 ---
 
-## OPEN DECISION — the client platform
+## Client platform — decided
 
-**The blueprint assumes Unity, but the only available development machine is an
-Android phone, and the Unity Editor does not run on Android** (Windows, macOS
-and Linux x86_64 only; no ARM build, no cloud editor). So the Unity client has
-never been opened, and cannot be from the current setup.
+**Unity is out.** Its Editor only runs on x86_64 desktop, and the only
+available development machine is an Android phone. The client is now a
+**TypeScript web app** (Vite): written and previewed on the phone, verified in
+CI, and wrappable to an Android APK with Capacitor.
 
-Three viable paths, awaiting a decision:
+Removed with it: the C# rules engine, the C# AI opponent, `tests/RulesEngine`
+and the `rules-engine` CI job. All recoverable from git history (the engine and
+AI are at commit `f83d491`). The upside is that the rules now exist **once**,
+on the server, so there is no client/server drift to police.
 
-| Path | Authoring on Android | CI verification |
-| ---- | -------------------- | --------------- |
-| **TypeScript web client** (recommended) | Yes — code in Termux, preview in a browser | Full |
-| **Godot** | Yes — Godot ships an Android editor (ARM64) | Partial (headless export) |
-| **Unity, code-first in CI** | No visual editing at all | Licence + slow builds |
-
-The web client is recommended because the server is already TypeScript and
-Colyseus' first-party SDK (`colyseus.js`) is too, so the client can share
-`shared/` types with the server rather than adding a third rules
-implementation. It also targets Web, Android (via Capacitor) and desktop from
-one codebase, which is what the blueprint's platform list asks for.
-
-**Nothing has been deleted yet.** If Unity is dropped, the affected code is:
-
-- `client/` — Unity skeleton (ProjectSettings, Packages, asmdefs, Editor
-  scripts, `GameBootstrap`, `ServerEndpoints`).
-- `client/Assets/Scripts/Gameplay/` — the C# rules engine and AI opponent
-  (~1,500 lines, 51 tests). These are engine-agnostic but would have no
-  consumer without a C#/Unity client; the server's TypeScript engine is the
-  authoritative one and is complete.
-- `tests/RulesEngine/` and the `rules-engine` CI job, which exist to test that
-  C# code.
-- The C# half of the `shared/board-constants.json` contract.
-
-All of it stays recoverable in git history. The server is unaffected either
-way — it has its own complete rules implementation.
+What the client has today: board geometry mapped to a 15x15 grid, the wire
+protocol mirrored from the server, a matchmaking REST client, and a rendered
+board. What it does not have: joining a live match (Issue 3.3), the turn UI,
+dice and pawn animation, and the lobby.
 
 ---
 
@@ -51,22 +32,20 @@ way — it has its own complete rules implementation.
 | Area | State |
 | ---- | ----- |
 | Backend foundation | NestJS gateway (`:3000`) + Colyseus (`:2567`), config, `/health`, Docker image, CI |
-| Offline rules engine (C#) | Board, moves, turn machine, captures, undo — 51 tests. *Fate depends on the client decision above.* |
-| Offline AI | Easy/Medium/Hard, measured ladder — see `MILESTONES.md`. *Same.* |
+| Client | Vite + TypeScript, board geometry and protocol contract — 22 tests |
 | Authoritative server | `ludo` room, server-side dice and validation, AFK bot takeover, matchmaking tickets — 76 tests |
 | Rule-drift protection | `shared/board-constants.json`, asserted by both suites |
 
-CI runs four jobs on every push: backend (lint/format/test/e2e/build), rules
-engine (`dotnet test`), Docker image build, and compose validation. The Unity
-build job stays commented out until the project is opened and licence secrets
-exist.
+CI runs three jobs on every push: backend (lint/format/test/e2e/build), client
+(format/test/build), and Docker (compose validation + image build).
 
 ## How to verify locally
 
 ```bash
 cd server && npm ci && npm test && npm run test:e2e   # 76 + 1
-dotnet test tests/RulesEngine/LudoVerse.Rules.Tests.csproj   # 51
+cd client && npm ci && npm test && npm run build      # 22
 scripts/dev-stack.sh          # Postgres + Redis + backend in watch mode
+cd client && npm run dev      # then open the printed URL on the phone
 ```
 
 ---
@@ -85,7 +64,10 @@ scripts/dev-stack.sh          # Postgres + Redis + backend in watch mode
 4. **Issue 4.1 — LiveKit token generation.** Server-side and self-contained;
    needs LiveKit credentials eventually, but the token endpoint can be built
    and tested against fixtures first.
-5. **Client work** (2.1, 2.3 visuals, 3.3) — gated on the platform decision above.
+5. **Issue 3.3 — join a live match from the client.** The protocol types and
+   matchmaking client exist; what is missing is consuming the seat
+   reservation, syncing room state, and rendering it. This is the most
+   satisfying next step because it makes the whole stack visible.
 
 ## Known gaps worth remembering
 
@@ -94,10 +76,11 @@ scripts/dev-stack.sh          # Postgres + Redis + backend in watch mode
 - **No auth.** Any client can claim any session id.
 - **Blocking rule not implemented** (two pawns barring a cell) — deliberate,
   documented as a Custom Rules option in both engines.
-- **The Ludo rules exist twice**, C# and TypeScript, because the client is
-  Unity and the server is Node. `shared/board-constants.json` plus the two
-  contract tests are what keep them honest — verified by breaking a constant
-  and watching both suites fail. Any rule change must land on both sides.
+- **The rules exist once**, on the server. The client asks and renders; it
+  never decides. `shared/board-constants.json` still pins board geometry for
+  both, and `client/src/net/protocol.test.ts` reads the server's message names
+  so a rename on either side fails the build.
+- **No offline play in the client** — Issue 6.1 needs redoing in TypeScript.
 - **`server/` is the only backend folder.** The blueprint lists both `server/`
   and `backend/`; see `docs/STRUCTURE.md` for why they were merged.
 - Dev-only npm audit warnings remain in build tooling (jest/eslint chains);
