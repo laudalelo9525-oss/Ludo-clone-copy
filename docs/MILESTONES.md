@@ -102,7 +102,34 @@ Editor (see Issue 1.5).
 
 ## 🔴 Phase 6: Monetization & AI (Claude Code)
 **Objective:** Shop, passes, and bot logic.
-- [ ] **Issue 6.1**: Implement Offline AI opponent (Easy/Medium/Hard).
+- [x] **Issue 6.1**: Implement Offline AI opponent (Easy/Medium/Hard).
+
+### AI opponent notes
+Lives in `client/Assets/Scripts/Gameplay/AI/`, on top of the rules engine and
+under the same no-UnityEngine rule, so CI tests it without an Editor.
+
+Difficulty is expressed as *what an opponent is blind to*, not as search depth:
+
+| Level  | Behaviour |
+| ------ | --------- |
+| Easy   | Picks a legal move at random (seeded, so replays are reproducible) |
+| Medium | Chases captures, home and progress; ignores danger entirely |
+| Hard   | Also counts threats: avoids landing in front of opponents and moves hunted pawns |
+
+Measured over two independent runs of 400 seeded matches each:
+
+| Match-up       | Win rate for the stronger side |
+| -------------- | ------------------------------ |
+| Hard vs Easy   | 91–94% |
+| Medium vs Easy | 85–91% |
+| Hard vs Medium | 53–59% |
+| Easy vs Easy   | ~50% (control) |
+
+Hard's edge over Medium is genuine but thin, because the evaluation is one ply
+and Ludo is dice-driven. Widening that gap is what **Expert** should be — a
+lookahead search — and Expert plus Adaptive AI (both named in the blueprint)
+remain unimplemented. `ILudoAi` is also the seam for the AFK auto-play takeover
+in Issue 6.2.
 - [ ] **Issue 6.2**: Add server-side AFK detection and Auto-Play Bot takeover.
 - [ ] **Issue 6.3**: Build the In-Game Store UI (Skins, Dice, Frames).
 - [ ] **Issue 6.4**: Integrate Payment gateway / Virtual Economy APIs.

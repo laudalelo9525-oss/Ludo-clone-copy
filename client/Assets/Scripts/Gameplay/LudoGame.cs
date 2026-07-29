@@ -208,50 +208,15 @@ namespace LudoVerse.Gameplay
         /// <summary>Sends every opponent pawn sharing the target cell back to its yard.</summary>
         private IReadOnlyList<CapturedPawn> ResolveCaptures(int movingPlayer, int landedOn)
         {
-            // Home columns are private and safe cells are protected, so a
-            // capture is only possible on an unprotected main track cell.
-            if (!LudoBoard.IsOnMainTrack(landedOn))
+            IReadOnlyList<CapturedPawn> captured =
+                BoardQuery.GetCapturableOpponents(State, movingPlayer, landedOn);
+
+            for (int i = 0; i < captured.Count; i++)
             {
-                return Array.Empty<CapturedPawn>();
+                State.SetPawn(captured[i].PlayerIndex, captured[i].PawnIndex, LudoBoard.YardPosition);
             }
 
-            int absolute = LudoBoard.ToAbsolute(State.ColorOf(movingPlayer), landedOn);
-            if (LudoBoard.IsSafeCell(absolute))
-            {
-                return Array.Empty<CapturedPawn>();
-            }
-
-            List<CapturedPawn> captured = null;
-
-            for (int player = 0; player < State.PlayerCount; player++)
-            {
-                if (player == movingPlayer)
-                {
-                    continue;
-                }
-
-                PlayerColor color = State.ColorOf(player);
-
-                for (int pawn = 0; pawn < LudoBoard.PawnsPerPlayer; pawn++)
-                {
-                    int position = State.GetPawn(player, pawn);
-                    if (!LudoBoard.IsOnMainTrack(position))
-                    {
-                        continue;
-                    }
-
-                    if (LudoBoard.ToAbsolute(color, position) != absolute)
-                    {
-                        continue;
-                    }
-
-                    State.SetPawn(player, pawn, LudoBoard.YardPosition);
-                    captured ??= new List<CapturedPawn>();
-                    captured.Add(new CapturedPawn(player, pawn));
-                }
-            }
-
-            return captured ?? (IReadOnlyList<CapturedPawn>)Array.Empty<CapturedPawn>();
+            return captured;
         }
 
         private bool TryFindLegalMove(int pawnIndex, out Move move)
