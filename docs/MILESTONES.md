@@ -152,7 +152,27 @@ and Ludo is dice-driven. Widening that gap is what **Expert** should be — a
 lookahead search — and Expert plus Adaptive AI (both named in the blueprint)
 remain unimplemented. `ILudoAi` is also the seam for the AFK auto-play takeover
 in Issue 6.2.
-- [ ] **Issue 6.2**: Add server-side AFK detection and Auto-Play Bot takeover.
+- [x] **Issue 6.2**: Add server-side AFK detection and Auto-Play Bot takeover.
+
+### AFK and auto-play notes
+Turns are timed in the room. A player who does not act within the turn timeout
+(20s, configurable per room) has that turn played for them, and two consecutive
+missed turns flag the seat as away — broadcast as `ON_PLAYER_AFK` and mirrored
+in `Player.afk` so the UI can show it. Acting again clears the flag and
+broadcasts `ON_PLAYER_RETURNED`.
+
+A seat whose player has dropped is covered immediately rather than after the
+full timeout, so one lost connection does not stall everyone else for 20
+seconds a turn. Auto-played rolls and moves are broadcast with
+`automated: true`, so clients can present them as the bot playing.
+
+This closes the stall risk the room shipped with: before it, a player who
+simply stopped sending `ROLL_DICE` froze the match indefinitely.
+
+The server's move picker (`rules/bot.ts`) mirrors the Hard offline opponent's
+considerations. It does *not* have to agree with the client the way the rules
+do — it only plays for an absent human, so there is no prediction to keep in
+sync.
 - [ ] **Issue 6.3**: Build the In-Game Store UI (Skins, Dice, Frames).
 - [ ] **Issue 6.4**: Integrate Payment gateway / Virtual Economy APIs.
 

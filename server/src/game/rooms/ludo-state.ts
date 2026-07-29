@@ -19,6 +19,8 @@ export const Player = schema({
   pawns: ['int8'],
   /** False while the player is away; the seat is held for reconnection. */
   connected: 'boolean',
+  /** True while the bot is covering this player's turns (Issue 6.2). */
+  afk: 'boolean',
 });
 
 export type PlayerState = InstanceType<typeof Player>;
@@ -50,6 +52,7 @@ export function createPlayer(sessionId: string, seat: number, name: string): Pla
   player.seat = seat;
   player.name = name;
   player.connected = true;
+  player.afk = false;
 
   for (let pawn = 0; pawn < PAWNS_PER_PLAYER; pawn++) {
     player.pawns.push(-1);

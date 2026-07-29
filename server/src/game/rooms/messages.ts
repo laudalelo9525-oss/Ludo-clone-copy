@@ -20,6 +20,10 @@ export const ServerMessage = {
   EmoteReceived: 'ON_EMOTE',
   /** Sent only to the offending client when a message is refused. */
   Rejected: 'ON_REJECTED',
+  /** A player missed enough turns that the bot has taken over. */
+  PlayerAfk: 'ON_PLAYER_AFK',
+  /** An away player acted again, so the bot has stood down. */
+  PlayerReturned: 'ON_PLAYER_RETURNED',
 } as const;
 
 export interface MovePawnPayload {
@@ -35,6 +39,8 @@ export interface DiceRolledEvent {
   player: string;
   /** Pawn indices the player may move; empty when the turn passes. */
   movablePawns: number[];
+  /** True when the bot rolled because the player was away. */
+  automated: boolean;
 }
 
 export interface PawnMovedEvent {
@@ -43,6 +49,17 @@ export interface PawnMovedEvent {
   newPosition: number;
   /** Pawns sent back to their yard by this move. */
   captures: Array<{ player: string; pawnIndex: number }>;
+  /** True when the bot played this move because the player was away. */
+  automated: boolean;
+}
+
+export interface PlayerAfkEvent {
+  player: string;
+  missedTurns: number;
+}
+
+export interface PlayerReturnedEvent {
+  player: string;
 }
 
 export interface TurnChangedEvent {

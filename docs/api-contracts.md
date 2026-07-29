@@ -34,6 +34,7 @@ Player = schema({
   name: "string",
   pawns: ["int8"],      // relative positions: -1 yard, 0..51 track, 52..57 home column
   connected: "boolean", // false while held open for reconnection
+  afk: "boolean",       // true while the bot is covering this player's turns
 });
 
 LudoState = schema({
@@ -52,12 +53,23 @@ LudoState = schema({
 - `SEND_EMOTE`: `{ "emoteId": "string" }` — Broadcasts an emote.
 
 ### Server Messages (Events)
-- `ON_DICE_ROLLED`: `{ "value": number, "player": "string", "movablePawns": number[] }`
-- `ON_PAWN_MOVED`: `{ "player": "string", "pawnIndex": number, "newPosition": number, "captures": [{ "player": "string", "pawnIndex": number }] }`
+- `ON_DICE_ROLLED`: `{ "value": number, "player": "string", "movablePawns": number[], "automated": boolean }`
+- `ON_PAWN_MOVED`: `{ "player": "string", "pawnIndex": number, "newPosition": number, "captures": [{ "player": "string", "pawnIndex": number }], "automated": boolean }`
 - `ON_TURN_CHANGED`: `{ "nextPlayer": "string" }`
 - `ON_EMOTE`: `{ "player": "string", "emoteId": "string" }`
 - `ON_REJECTED`: `{ "message": "string", "reason": "string" }` — sent only to
   the client whose request was refused.
+- `ON_PLAYER_AFK`: `{ "player": "string", "missedTurns": number }`
+- `ON_PLAYER_RETURNED`: `{ "player": "string" }`
+
+`automated: true` means the bot played that roll or move because the player was
+away; clients should present it as such rather than as the player acting.
+
+### Turn timing
+A player has 20 seconds (configurable per room) to roll or move. Miss it and
+the turn is auto-played; miss two in a row and the seat is flagged away, after
+which the bot plays immediately until the player acts again. A dropped player's
+turns are covered from the moment they disconnect.
 
 ### Authority
 The server decides dice values and legal moves. A request that is out of turn,

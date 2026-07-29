@@ -19,9 +19,36 @@ interface Sent {
 class TestableLudoRoom extends LudoRoom {
   readonly broadcasts: Sent[] = [];
 
+  /** The pending turn timer, if any, so tests can fire it on demand. */
+  private pending: { callback: () => void; delayMs: number } | null = null;
+
   constructor(dice: DiceRoller) {
     super();
     this.dice = dice;
+  }
+
+  protected override schedule(callback: () => void, delayMs: number): { clear(): void } {
+    this.pending = { callback, delayMs };
+    return {
+      clear: () => {
+        this.pending = null;
+      },
+    };
+  }
+
+  get pendingDelayMs(): number | null {
+    return this.pending?.delayMs ?? null;
+  }
+
+  /** Fires the armed turn timer, as the clock would. */
+  fireTurnTimer(): void {
+    const pending = this.pending;
+    if (!pending) {
+      throw new Error('No turn timer is armed.');
+    }
+
+    this.pending = null;
+    pending.callback();
   }
 
   override broadcast(type: string | number, message?: unknown): void {
@@ -67,7 +94,7 @@ function newRoom(...dice: number[]): {
   green: FakeClient;
 } {
   const room = new TestableLudoRoom(new ScriptedDiceRoller(...dice));
-  room.onCreate({ maxPlayers: 2 });
+  room.onCreate({ maxPlayers: 2, turnTimeoutMs: 20_000 });
 
   const red = fakeClient('red-session');
   const green = fakeClient('green-session');
@@ -115,6 +142,7 @@ describe('LudoRoom', () => {
       value: 6,
       player: 'red-session',
       movablePawns: [0, 1, 2, 3],
+      automated: false,
     });
     expect(room.state.diceValue).toBe(6);
   });
@@ -134,6 +162,7 @@ describe('LudoRoom', () => {
       pawnIndex: 2,
       newPosition: 0,
       captures: [],
+      automated: false,
     });
   });
 
@@ -226,6 +255,131 @@ describe('LudoRoom', () => {
 
       expect(red.sent.pop()?.type).toBe(ServerMessage.Rejected);
       expect(room.broadcastsOf(ServerMessage.DiceRolled)).toHaveLength(1);
+    });
+  });
+
+  describe('afk detection and bot takeover (Issue 6.2)', () => {
+    it('arms the full turn timeout for a present player', () => {
+      const { room } = newRoom(6);
+
+      expect(room.pendingDelayMs).toBe(20_000);
+    });
+
+    it('auto-plays a turn the player never takes', () => {
+      const { room } = newRoom(6);
+
+      room.fireTurnTimer();
+
+      const rolled = room.broadcastsOf(ServerMessage.DiceRolled).pop();
+      const moved = room.broadcastsOf(ServerMessage.PawnMoved).pop();
+
+      expect(rolled?.payload).toMatchObject({ player: 'red-session', automated: true });
+      expect(moved?.payload).toMatchObject({ player: 'red-session', automated: true });
+      // A six was rolled, so a pawn left the yard.
+      expect([...(room.state.players.get('red-session')?.pawns ?? [])]).toContain(0);
+    });
+
+    it('flags a player away only after repeated misses', () => {
+      // Red misses twice: a 3 passes the turn on, Green rolls a 3 too, then
+      // Red misses again.
+      const { room, green } = newRoom(3, 3, 3);
+
+      room.fireTurnTimer();
+      expect(room.state.players.get('red-session')?.afk).toBe(false);
+      expect(room.broadcastsOf(ServerMessage.PlayerAfk)).toHaveLength(0);
+
+      // Green plays properly, handing the turn back to Red.
+      room.roll(green);
+
+      room.fireTurnTimer();
+
+      expect(room.state.players.get('red-session')?.afk).toBe(true);
+      expect(room.broadcastsOf(ServerMessage.PlayerAfk).pop()?.payload).toEqual({
+        player: 'red-session',
+        missedTurns: 2,
+      });
+    });
+
+    it('uses the short bot delay once a player is flagged away', () => {
+      const { room, green } = newRoom(3, 3, 3, 3);
+
+      room.fireTurnTimer();
+      room.roll(green);
+      room.fireTurnTimer();
+      expect(room.state.players.get('red-session')?.afk).toBe(true);
+
+      // The auto-played turn passed play to Green; bring it back to Red.
+      room.roll(green);
+
+      expect(room.state.currentTurnSessionId).toBe('red-session');
+      expect(room.pendingDelayMs).toBeLessThan(20_000);
+    });
+
+    it('stands the bot down as soon as the player acts again', () => {
+      const { room, red, green } = newRoom(3, 3, 6, 4);
+
+      room.fireTurnTimer();
+      room.roll(green);
+      room.fireTurnTimer();
+      expect(room.state.players.get('red-session')?.afk).toBe(true);
+
+      // Red comes back and takes their own turn.
+      room.roll(red);
+
+      expect(room.state.players.get('red-session')?.afk).toBe(false);
+      expect(room.broadcastsOf(ServerMessage.PlayerReturned).pop()?.payload).toEqual({
+        player: 'red-session',
+      });
+    });
+
+    it('covers the turns of a player who dropped', () => {
+      const { room, green } = newRoom(3);
+
+      jest
+        .spyOn(room, 'allowReconnection')
+        .mockReturnValue(
+          new Promise(() => {}) as unknown as ReturnType<typeof room.allowReconnection>,
+        );
+
+      // onDrop waits on the reconnection window, so it stays pending; the
+      // takeover state it sets before awaiting is what matters here.
+      void room.onDrop(green);
+
+      expect(room.state.players.get('green-session')?.connected).toBe(false);
+      expect(room.pendingDelayMs).toBe(20_000);
+
+      // Red's turn passes to the dropped seat, which the bot picks up at once.
+      room.fireTurnTimer();
+
+      expect(room.state.currentTurnSessionId).toBe('green-session');
+      expect(room.pendingDelayMs).toBeLessThan(20_000);
+    });
+
+    it('stops timing turns once the match is won', () => {
+      const { room, red } = newRoom(2);
+      room['match']!.state.positions[0] = [55, 57, 57, 57];
+
+      room.roll(red);
+      room.move(red, 0);
+
+      expect(room.state.gameState).toBe(RoomStatus.Finished);
+      expect(room.pendingDelayMs).toBeNull();
+    });
+
+    it('picks a capture when it auto-plays', () => {
+      const { room } = newRoom(2);
+      room['match']!.state.positions[0][0] = 3;
+      room['match']!.state.positions[0][1] = 30;
+      room['match']!.state.positions[1][0] = 44;
+
+      room.fireTurnTimer();
+
+      const moved = room.broadcastsOf(ServerMessage.PawnMoved).pop();
+      expect(moved?.payload).toMatchObject({
+        pawnIndex: 0,
+        automated: true,
+        captures: [{ player: 'green-session', pawnIndex: 0 }],
+      });
     });
   });
 
