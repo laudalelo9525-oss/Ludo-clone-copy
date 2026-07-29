@@ -59,8 +59,12 @@ jobs:
       - name: Build backend image
         run: docker build -f docker/Dockerfile -t ludoverse-server:ci .
 
-  # Unity client build — enabled with Issue 1.5, once the Unity project exists.
-  # Requires UNITY_LICENSE / UNITY_EMAIL / UNITY_PASSWORD repository secrets.
+  # Unity client build. The project skeleton exists (Issue 1.5), but this job
+  # stays disabled until two things are true:
+  #   1. UNITY_LICENSE / UNITY_EMAIL / UNITY_PASSWORD repository secrets exist.
+  #   2. The project has been opened once in the Editor so the generated .meta
+  #      files, scenes and ProjectSettings assets are committed.
+  # Enabling it before then produces a red build on every push.
   # unity-build:
   #   runs-on: ubuntu-latest
   #   steps:

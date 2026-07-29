@@ -5,7 +5,11 @@
 [Bb]uild/
 [Bb]uilds/
 [Ll]ogs/
+[Uu]serSettings/
 [Mm]emoryCaptures/
+[Rr]ecordings/
+sysinfo.txt
+crashlytics-build.properties
 *.csproj
 *.sln
 *.suo

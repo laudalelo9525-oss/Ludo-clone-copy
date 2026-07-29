@@ -10,7 +10,11 @@ This document outlines the project milestones and granular issues to be tracked 
 - [x] **Issue 1.2**: Generate Architecture Documents (SRS, SDD, API Contracts).
 - [x] **Issue 1.3**: Set up local DevOps (Docker Compose, GitHub Actions).
 - [x] **Issue 1.4**: Scaffold NestJS + Colyseus Backend.
-- [ ] **Issue 1.5**: Initialize Unity 6 Client skeleton and asset structure.
+- [x] **Issue 1.5**: Initialize Unity 6 Client skeleton and asset structure.
+      Project skeleton, package manifest, assembly layout, bootstrap scripts and
+      editor tooling are committed. Unity itself must be opened once to generate
+      `.meta` files, the scenes and the remaining `ProjectSettings/` assets — see
+      `client/README.md`.
 
 ### Phase 1 hardening pass (Claude Code review of the scaffold)
 The scaffold was reviewed against the blueprint in `README.md` and brought up to

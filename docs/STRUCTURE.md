@@ -5,7 +5,7 @@ repository.
 
 | Blueprint folder | Repository path | Status | Notes |
 | ---------------- | --------------- | ------ | ----- |
-| `client/`     | `client/`     | Placeholder | Unity 6 LTS project — Issue 1.5 |
+| `client/`     | `client/`     | Skeleton    | Unity 6 LTS project; needs one Editor open to finish generating |
 | `server/`     | `server/`     | Active      | NestJS gateway + Colyseus realtime server |
 | `backend/`    | `server/`     | Merged      | Deliberately not a second folder — see below |
 | `shared/`     | `shared/`     | Placeholder | Client/server contracts — filled in Issue 3.2 |
