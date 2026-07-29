@@ -71,13 +71,16 @@ wiring the client to a live match. The client now renders the board grid; see
 **Objective:** Real-time multiplayer synchronization using Colyseus.
 - [ ] **Issue 3.1**: Integrate Firebase Auth in the client and NestJS.
 - [x] **Issue 3.2**: Create Colyseus `LudoRoom` state schema on the backend.
-- [ ] **Issue 3.3**: Implement client-side Colyseus connection and state sync.
+- [x] **Issue 3.3**: Implement client-side Colyseus connection and state sync.
+      *(Joins, syncs, renders pawns from live state, and sends roll/move. Dice
+      and pawn animation are Issue 2.3/2.1.)*
 - [x] **Issue 3.4**: Move dice RNG and move validation to the authoritative server.
 - [x] **Issue 3.5**: Build the matchmaking queue and room creation API.
       *(Quick match done; private rooms and invite codes still open.)*
 - [ ] **Issue 3.6**: Implement network reconnection and state recovery logic.
-      *(Server half done: a dropped player's seat is held for 60s and the state
-      resyncs on return. The client half needs Issue 3.3.)*
+      *(Server holds a dropped seat for 60s and the client is told it dropped;
+      what is missing is the client automatically re-joining with its
+      reconnection token instead of asking the player to reload.)*
 
 ### Matchmaking notes
 `POST /matchmaking/ticket` validates the mode and seat count, reserves a seat

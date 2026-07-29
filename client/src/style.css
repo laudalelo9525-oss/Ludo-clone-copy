@@ -62,3 +62,53 @@ svg {
 code {
   font-family: ui-monospace, monospace;
 }
+
+.status {
+  min-height: 1.5em;
+  font-weight: 600;
+}
+
+.controls {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+button {
+  flex: 1 1 5rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  backdrop-filter: blur(8px);
+  transition: transform 120ms ease, opacity 120ms ease;
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+button:disabled {
+  opacity: 0.4;
+}
+
+.pawn {
+  stroke: rgba(0, 0, 0, 0.5);
+  stroke-width: 0.04;
+  transition: cx 220ms ease, cy 220ms ease;
+}
+
+.pawn.mine {
+  stroke: #fff;
+  stroke-width: 0.08;
+}
+
+.notice {
+  color: #ffb4a9;
+  font-size: 0.85rem;
+}

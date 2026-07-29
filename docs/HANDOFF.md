@@ -20,10 +20,11 @@ and the `rules-engine` CI job. All recoverable from git history (the engine and
 AI are at commit `f83d491`). The upside is that the rules now exist **once**,
 on the server, so there is no client/server drift to police.
 
-What the client has today: board geometry mapped to a 15x15 grid, the wire
-protocol mirrored from the server, a matchmaking REST client, and a rendered
-board. What it does not have: joining a live match (Issue 3.3), the turn UI,
-dice and pawn animation, and the lobby.
+What the client has today: board geometry, the wire protocol, a matchmaking
+REST client, and a **working live match** — it joins a room, renders every
+pawn from synced state, shows whose turn it is, and sends roll/move requests
+(Issue 3.3). What it does not have: dice and pawn animation, automatic
+reconnection, a lobby, and offline play.
 
 ---
 
@@ -48,7 +49,7 @@ Bumping `@colyseus/core` to 0.17 again breaks every client until a 0.17
 | Area | State |
 | ---- | ----- |
 | Backend foundation | NestJS gateway (`:3000`) + Colyseus (`:2567`), config, `/health`, Docker image, CI |
-| Client | Vite + TypeScript, board geometry and protocol contract — 22 tests |
+| Client | Vite + TypeScript; joins a live match, renders pawns from synced state, sends roll/move — 29 tests |
 | Authoritative server | `ludo` room, server-side dice and validation, AFK bot takeover, matchmaking tickets — 76 tests |
 | Rule-drift protection | `shared/board-constants.json`, asserted by both suites |
 
@@ -80,13 +81,12 @@ cd client && npm run dev      # then open the printed URL on the phone
 4. **Issue 4.1 — LiveKit token generation.** Server-side and self-contained;
    needs LiveKit credentials eventually, but the token endpoint can be built
    and tested against fixtures first.
-5. **Issue 3.3 — join a live match from the client.** *Now unblocked.* The
-   protocol types, the matchmaking client and a proven-compatible SDK are all
-   in place; what is missing is a `LudoClient` that consumes the seat
-   reservation, subscribes to state, and drives the board render, plus a roll
-   button and pawn placement from live state. Start here — the interop probe
-   in the commit message for the 0.16 downgrade shows the exact calls that
-   work.
+5. **Polish the match loop.** Issue 3.3 is done — a match is playable end to
+   end from the browser. The next increments, in order of payoff: pawn move
+   animation and a dice roll animation (Issues 2.1/2.3), tapping a pawn on the
+   board instead of the numbered buttons, automatic reconnection using the
+   room's reconnection token (the client currently asks the player to reload),
+   and a lobby with mode selection wired to the matchmaking ticket endpoint.
 
 ## Known gaps worth remembering
 
