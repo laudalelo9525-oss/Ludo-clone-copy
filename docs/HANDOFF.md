@@ -56,6 +56,18 @@ Bumping `@colyseus/core` to 0.17 again breaks every client until a 0.17
 CI runs three jobs on every push: backend (lint/format/test/e2e/build), client
 (format/test/build), and Docker (compose validation + image build).
 
+## Seen working in a real browser
+
+Rendered at phone size (390x844) in Chromium with two players in one match:
+both seated, all eight pawns drawn in their yards, "Your turn" with Roll
+enabled, and rolling passed the turn to the other player. No console errors.
+
+Playwright is **not** a dependency — it was installed for that check and
+removed again, to keep `npm ci` light on a phone. To repeat it: install
+`playwright`, launch with
+`executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome'`, and
+point two pages at the preview server.
+
 ## How to verify locally
 
 ```bash
