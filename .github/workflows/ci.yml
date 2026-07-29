@@ -1,0 +1,41 @@
+name: LudoVerse CI
+
+on:
+  push:
+    branches: [ "main", "Code" ]
+  pull_request:
+    branches: [ "main", "Code" ]
+
+jobs:
+  backend-lint-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./server
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      # - name: Install Dependencies
+      #   run: npm ci
+        
+      # - name: Run Lint
+      #   run: npm run lint
+        
+      # - name: Run Tests
+      #   run: npm run test
+
+  # Unity Build (Placeholder)
+  # unity-build:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Build Unity Client
+  #       uses: game-ci/unity-builder@v3
+  #       with:
+  #         projectPath: ./client
+  #         targetPlatform: WebGL

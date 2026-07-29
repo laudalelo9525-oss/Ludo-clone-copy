@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: ludoverse_db
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: rootpassword
+      POSTGRES_DB: ludoverse
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ../database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: ludoverse_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+
+  # Placeholder for Backend (to be added once initialized)
+  # backend:
+  #   build:
+  #     context: ../server
+  #   ports:
+  #     - "3000:3000"
+  #     - "2567:2567" # Colyseus port
+  #   environment:
+  #     - DATABASE_URL=postgresql://root:rootpassword@postgres:5432/ludoverse
+  #     - REDIS_URL=redis://redis:6379
+  #   depends_on:
+  #     - postgres
+  #     - redis
+
+volumes:
+  pgdata:
+  redisdata:
