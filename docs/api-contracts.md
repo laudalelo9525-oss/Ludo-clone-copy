@@ -9,10 +9,17 @@
 
 ### Matchmaking
 - `POST /matchmaking/ticket`
-  - **Body**: `{ "gameMode": "CLASSIC", "players": 4 }`
-  - **Response**: `{ "ticketId": "string", "status": "SEARCHING" }`
+  - **Body**: `{ "gameMode": "CLASSIC" | "QUICK" | "MASTER" | "TOURNAMENT", "players": 2 | 4 }`
+  - **Response**: `{ "ticketId": "string", "status": "FOUND", "roomId": "string", "sessionId": "string", "serverUrl": "string", "reservation": { ... } }`
+  - `400` when the mode or seat count is not one of the values above.
+  - `status` is `FAILED` (with `error`) when no seat could be reserved; the
+    client should issue a new ticket rather than retry the old one.
 - `GET /matchmaking/status/:ticketId`
-  - **Response**: `{ "status": "FOUND", "roomId": "string", "serverUrl": "string" }`
+  - **Response**: the same ticket object. `404` once it expires (5 minutes).
+
+Pass `reservation` straight to the Colyseus client's
+`consumeSeatReservation()` — it is the handle that turns a ticket into a
+connection, so clients never guess a room id.
 
 ### Economy & Store
 - `GET /user/:id/inventory`

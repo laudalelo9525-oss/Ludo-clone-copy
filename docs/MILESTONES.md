@@ -76,10 +76,25 @@ Editor (see Issue 1.5).
 - [x] **Issue 3.2**: Create Colyseus `LudoRoom` state schema on the backend.
 - [ ] **Issue 3.3**: Implement client-side Colyseus connection and state sync.
 - [x] **Issue 3.4**: Move dice RNG and move validation to the authoritative server.
-- [ ] **Issue 3.5**: Build the matchmaking queue and room creation API.
+- [x] **Issue 3.5**: Build the matchmaking queue and room creation API.
+      *(Quick match done; private rooms and invite codes still open.)*
 - [ ] **Issue 3.6**: Implement network reconnection and state recovery logic.
       *(Server half done: a dropped player's seat is held for 60s and the state
       resyncs on return. The client half needs Issue 3.3.)*
+
+### Matchmaking notes
+`POST /matchmaking/ticket` validates the mode and seat count, reserves a seat
+through the Colyseus matchmaker, and returns the reservation the client SDK
+consumes; `GET /matchmaking/status/:ticketId` looks it up again. Tickets expire
+after five minutes.
+
+Colyseus already solves finding-or-creating a room with a free seat (across
+processes once Redis presence is configured), so the gateway owns the ticket
+lifecycle rather than reimplementing matchmaking. The ticket indirection is
+what lets skill buckets, party grouping or backfill arrive later without
+changing the client contract.
+
+Not done: private rooms and invite codes, and any notion of rating.
 
 ### Authoritative server notes
 The room is registered as `ludo`; clients reach it with
