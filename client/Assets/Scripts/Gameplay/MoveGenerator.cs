@@ -7,9 +7,10 @@ namespace LudoVerse.Gameplay
     /// Works out which pawns a player may move for a given die value.
     /// </summary>
     /// <remarks>
-    /// The same generator runs on the client for input hints and on the
-    /// authoritative server for validation (Issue 3.4), so it must stay free of
-    /// engine types and of randomness.
+    /// Deterministic and free of engine types, so the client can use it for
+    /// input hints and the Phase 6 AI can use it to search. The authoritative
+    /// server is TypeScript and keeps its own implementation; the constants
+    /// both sides must agree on belong in <c>shared/</c>.
     /// </remarks>
     public static class MoveGenerator
     {

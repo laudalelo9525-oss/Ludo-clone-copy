@@ -9,9 +9,15 @@ namespace LudoVerse.Gameplay
     /// </summary>
     /// <remarks>
     /// <para>
-    /// Deliberately free of any engine type, so the same code drives the Unity
-    /// client, the Phase 6 AI opponent, and the authoritative server checks.
-    /// Presentation reacts to <see cref="MoveResult"/>; it is never consulted.
+    /// Deliberately free of any engine type, so the same code drives offline
+    /// play in the Unity client and the Phase 6 AI opponent, and can be tested
+    /// without an Editor. Presentation reacts to <see cref="MoveResult"/>; it is
+    /// never consulted.
+    /// </para>
+    /// <para>
+    /// This is <em>not</em> the authoritative implementation for online play:
+    /// the game server is TypeScript (Issue 3.4) and validates moves itself.
+    /// The two must agree, so the shared constants live in <c>shared/</c>.
     /// </para>
     /// <para>Rules implemented, matching the Classic mode in the blueprint:</para>
     /// <list type="bullet">

@@ -13,3 +13,12 @@ mirrors generated or hand-kept under `client/Assets/Scripts/Shared/`.
 
 Populated during Phase 3 (Issue 3.2), when the `LudoRoom` state schema is
 defined. Until then `docs/api-contracts.md` is the source of truth.
+
+## Why this matters for the rules
+
+The offline rules engine is C# (`client/Assets/Scripts/Gameplay/`) and the
+authoritative server is TypeScript, so the Ludo rules necessarily exist twice.
+The board constants they must agree on — track length, home column length, the
+safe cells, the die value that releases a pawn — belong here, and a contract
+test in `tests/` should fail when the two drift apart. Anything else risks a
+client that predicts a move the server then rejects.

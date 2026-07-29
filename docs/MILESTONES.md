@@ -44,9 +44,15 @@ production standard:
 
 ### Rules engine notes
 The engine lives in `client/Assets/Scripts/Gameplay/` and holds **no UnityEngine
-references** (enforced by `noEngineReferences` on its asmdef). That keeps one
-implementation for three consumers: the Unity client, the Phase 6 AI opponent,
-and the authoritative server validation in Issue 3.4.
+references** (enforced by `noEngineReferences` on its asmdef). That serves
+offline play in the Unity client and the Phase 6 AI opponent from one
+implementation, and lets it be tested without an Editor.
+
+It is **not** the authoritative implementation for online play: the game server
+is TypeScript, so Issue 3.4 needs these rules mirrored there. Keeping two
+implementations honest is the job of `shared/` (board constants and rule
+parameters) plus contract tests in `tests/`; that mirroring is tracked as part
+of Issue 3.4 and is not done yet.
 
 Because it is engine-agnostic, CI verifies it with `dotnet test` — no Unity
 licence needed — while the same test files also run in the Editor's Test Runner.
