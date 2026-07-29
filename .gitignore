@@ -33,6 +33,13 @@ ExportedObj/
 ^*.private.[0-9]+$
 ^*.private.[0-9]+.meta$
 
+# .NET (rules engine test project)
+[Bb]in/
+[Oo]bj/
+*.user
+# Unity regenerates *.csproj (ignored above), but this one is hand-written.
+!tests/RulesEngine/*.csproj
+
 # Node.js
 node_modules/
 npm-debug.log

@@ -35,11 +35,32 @@ production standard:
 ## 🟡 Phase 2: Core Gameplay (Claude Code)
 **Objective:** Implement the offline board logic and rules engine in Unity.
 - [ ] **Issue 2.1**: Implement the Ludo Board UI and grid system (Unity).
-- [ ] **Issue 2.2**: Create the Pawn movement logic and pathfinding.
-- [ ] **Issue 2.3**: Implement the Dice RNG and physics animation.
-- [ ] **Issue 2.4**: Build the turn-based state machine (Turn -> Roll -> Move -> Check Win).
-- [ ] **Issue 2.5**: Add game rules (Safe zones, capturing pawns, winning).
-- [ ] **Issue 2.6**: Implement offline Undo feature.
+- [x] **Issue 2.2**: Create the Pawn movement logic and pathfinding.
+- [ ] **Issue 2.3**: Implement the Dice RNG and physics animation. *(RNG done —
+      `SeededDiceRoller`; the physics animation is scene work.)*
+- [x] **Issue 2.4**: Build the turn-based state machine (Turn -> Roll -> Move -> Check Win).
+- [x] **Issue 2.5**: Add game rules (Safe zones, capturing pawns, winning).
+- [x] **Issue 2.6**: Implement offline Undo feature.
+
+### Rules engine notes
+The engine lives in `client/Assets/Scripts/Gameplay/` and holds **no UnityEngine
+references** (enforced by `noEngineReferences` on its asmdef). That keeps one
+implementation for three consumers: the Unity client, the Phase 6 AI opponent,
+and the authoritative server validation in Issue 3.4.
+
+Because it is engine-agnostic, CI verifies it with `dotnet test` — no Unity
+licence needed — while the same test files also run in the Editor's Test Runner.
+See `tests/README.md`.
+
+Classic rules covered: leaving the yard on a six, exact roll to reach home,
+capture on unprotected cells, the eight safe cells, extra turn on a six or a
+capture or reaching home, three sixes forfeiting the turn, and win detection.
+Blocking (two pawns barring a cell) is left to Custom Rules and is not
+implemented.
+
+Still open in this phase: the board and pawn visuals, dice physics and
+animations, and wiring the engine to the scenes — all of which need the Unity
+Editor (see Issue 1.5).
 
 ---
 

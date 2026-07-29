@@ -16,7 +16,7 @@ repository.
 | `.github/`    | `.github/`    | Active      | CI workflows |
 | `scripts/`    | `scripts/`    | Active      | Developer helper scripts |
 | `assets/`     | `assets/`     | Placeholder | `ui/`, `audio/`, `video/`, `animations/` |
-| `tests/`      | `tests/`      | Placeholder | Cross-component integration and load tests |
+| `tests/`      | `tests/`      | Active      | Rules engine test project; integration and load tests to come |
 
 ## Why there is no separate `backend/`
 

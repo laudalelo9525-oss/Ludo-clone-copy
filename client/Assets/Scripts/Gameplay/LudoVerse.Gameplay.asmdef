@@ -1,9 +1,7 @@
 {
   "name": "LudoVerse.Gameplay",
   "rootNamespace": "LudoVerse.Gameplay",
-  "references": [
-    "LudoVerse.Core"
-  ],
+  "references": [],
   "includePlatforms": [],
   "excludePlatforms": [],
   "allowUnsafeCode": false,
@@ -12,5 +10,5 @@
   "autoReferenced": true,
   "defineConstraints": [],
   "versionDefines": [],
-  "noEngineReferences": false
+  "noEngineReferences": true
 }

@@ -47,6 +47,23 @@ jobs:
       - name: Build
         run: npm run build
 
+  rules-engine:
+    name: Rules engine (dotnet test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      # The gameplay logic carries no UnityEngine references, so it is compiled
+      # and tested here without a Unity installation or licence. The same files
+      # also run inside the Editor's Test Runner.
+      - name: Test
+        run: dotnet test tests/RulesEngine/LudoVerse.Rules.Tests.csproj --verbosity minimal
+
   docker:
     name: Docker compose config
     runs-on: ubuntu-latest
