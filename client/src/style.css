@@ -33,7 +33,7 @@ h1 {
 
 /* Glassmorphic surface, per the blueprint's design system. */
 .board {
-  padding: 0.75rem;
+  padding: 0.5rem;
   border: 1px solid var(--line);
   border-radius: 1.25rem;
   background: var(--surface);
@@ -47,10 +47,45 @@ svg {
   display: block;
 }
 
+:root {
+  --cell: #f7f8fc;
+}
+
+.felt {
+  fill: #fbfcff;
+}
+
 .cell {
-  fill: rgba(255, 255, 255, 0.08);
-  stroke: var(--line);
-  stroke-width: 0.03;
+  stroke: #2b2f45;
+  stroke-width: 0.045;
+}
+
+.yard {
+  stroke: #2b2f45;
+  stroke-width: 0.06;
+}
+
+.yard-inner {
+  fill: #fbfcff;
+  stroke: #2b2f45;
+  stroke-width: 0.05;
+}
+
+.ring {
+  fill: none;
+  stroke: #2b2f45;
+  stroke-width: 0.05;
+}
+
+.star {
+  font-size: 0.62px;
+  text-anchor: middle;
+  fill: #6b7089;
+}
+
+polygon {
+  stroke: #2b2f45;
+  stroke-width: 0.05;
 }
 
 .endpoints {

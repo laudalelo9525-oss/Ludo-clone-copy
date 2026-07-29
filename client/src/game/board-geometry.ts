@@ -185,6 +185,26 @@ export function mainTrack(): readonly Cell[] {
   return MAIN_TRACK;
 }
 
+/** The six home column cells of a seat, running inward. */
+export function homeColumn(seat: number): readonly Cell[] {
+  assertSeat(seat);
+  return HOME_COLUMNS[seat];
+}
+
+/** Top-left corner of a seat's 6x6 yard block. */
+export function yardCorner(seat: number): Cell {
+  assertSeat(seat);
+  return [
+    { x: 0, y: 0 },
+    { x: 9, y: 0 },
+    { x: 9, y: 9 },
+    { x: 0, y: 9 },
+  ][seat];
+}
+
+/** Absolute track indices that cannot be captured on. */
+export const SAFE_CELLS: readonly number[] = [0, 8, 13, 21, 26, 34, 39, 47];
+
 function assertSeat(seat: number): void {
   if (!Number.isInteger(seat) || seat < 0 || seat > 3) {
     throw new RangeError(`Seat must be 0..3, got ${seat}.`);
