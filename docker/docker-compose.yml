@@ -1,43 +1,63 @@
-version: '3.8'
+# Local development stack. Copy docker/.env.example to docker/.env to override
+# credentials; the defaults below are development-only.
 
 services:
   postgres:
     image: postgres:15-alpine
     container_name: ludoverse_db
     environment:
-      POSTGRES_USER: root
-      POSTGRES_PASSWORD: rootpassword
-      POSTGRES_DB: ludoverse
+      POSTGRES_USER: ${POSTGRES_USER:-ludoverse}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ludoverse}
+      POSTGRES_DB: ${POSTGRES_DB:-ludoverse}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ../database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+      # Applied only when the data volume is empty (first boot).
+      - ../database/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ludoverse} -d ${POSTGRES_DB:-ludoverse}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
 
   redis:
     image: redis:7-alpine
     container_name: ludoverse_redis
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redisdata:/data
     command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
 
-  # Placeholder for Backend (to be added once initialized)
-  # backend:
-  #   build:
-  #     context: ../server
-  #   ports:
-  #     - "3000:3000"
-  #     - "2567:2567" # Colyseus port
-  #   environment:
-  #     - DATABASE_URL=postgresql://root:rootpassword@postgres:5432/ludoverse
-  #     - REDIS_URL=redis://redis:6379
-  #   depends_on:
-  #     - postgres
-  #     - redis
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: ludoverse_server
+    ports:
+      - "${PORT:-3000}:3000"       # NestJS REST gateway
+      - "${COLYSEUS_PORT:-2567}:2567" # Colyseus realtime server
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      COLYSEUS_PORT: 2567
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ludoverse}:${POSTGRES_PASSWORD:-ludoverse}@postgres:5432/${POSTGRES_DB:-ludoverse}
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   pgdata:

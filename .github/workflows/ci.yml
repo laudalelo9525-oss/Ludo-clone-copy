@@ -2,40 +2,71 @@ name: LudoVerse CI
 
 on:
   push:
-    branches: [ "main", "Code" ]
+    branches: ["main", "Code", "claude/**"]
   pull_request:
-    branches: [ "main", "Code" ]
+    branches: ["main", "Code"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  backend-lint-test:
+  backend:
+    name: Backend (lint, test, build)
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ./server
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          
-      # - name: Install Dependencies
-      #   run: npm ci
-        
-      # - name: Run Lint
-      #   run: npm run lint
-        
-      # - name: Run Tests
-      #   run: npm run test
+          # Colyseus pulls in ESM-only dependencies that require Node's
+          # require(esm) support, available from 22.12.
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: server/package-lock.json
 
-  # Unity Build (Placeholder)
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm run test
+
+      - name: End-to-end tests
+        run: npm run test:e2e
+
+      - name: Build
+        run: npm run build
+
+  docker:
+    name: Docker compose config
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate compose file
+        run: docker compose -f docker/docker-compose.yml config --quiet
+
+      - name: Build backend image
+        run: docker build -f docker/Dockerfile -t ludoverse-server:ci .
+
+  # Unity client build — enabled with Issue 1.5, once the Unity project exists.
+  # Requires UNITY_LICENSE / UNITY_EMAIL / UNITY_PASSWORD repository secrets.
   # unity-build:
   #   runs-on: ubuntu-latest
   #   steps:
   #     - uses: actions/checkout@v4
   #     - name: Build Unity Client
-  #       uses: game-ci/unity-builder@v3
+  #       uses: game-ci/unity-builder@v4
   #       with:
   #         projectPath: ./client
   #         targetPlatform: WebGL

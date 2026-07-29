@@ -12,6 +12,20 @@ This document outlines the project milestones and granular issues to be tracked 
 - [x] **Issue 1.4**: Scaffold NestJS + Colyseus Backend.
 - [ ] **Issue 1.5**: Initialize Unity 6 Client skeleton and asset structure.
 
+### Phase 1 hardening pass (Claude Code review of the scaffold)
+The scaffold was reviewed against the blueprint in `README.md` and brought up to
+production standard:
+- Colyseus is now actually bootstrapped (Issue 1.4 previously shipped the
+  dependencies only) with a managed lifecycle on its own port.
+- The generated NestJS starter boilerplate was replaced by a configuration
+  module, a `/health` endpoint, and tests covering both.
+- CI now installs, formats, lints, tests, builds, and validates the Docker
+  stack, instead of running an empty job.
+- `docker-compose.yml` runs the backend image via `docker/Dockerfile`, with
+  healthchecks and environment-driven credentials.
+- Blueprint folders (`shared/`, `design/`, `scripts/`, `assets/`, `tests/`) now
+  exist; see `docs/STRUCTURE.md` for the blueprint-to-repository mapping.
+
 ---
 
 ## 🟡 Phase 2: Core Gameplay (Claude Code)
