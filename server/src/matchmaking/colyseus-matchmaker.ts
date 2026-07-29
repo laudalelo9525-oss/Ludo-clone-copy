@@ -16,7 +16,7 @@ export class ColyseusMatchmaker implements RoomMatchmaker {
     const reservation = await matchMaker.joinOrCreate(roomName, options);
 
     return {
-      roomId: reservation.roomId,
+      roomId: reservation.room.roomId,
       sessionId: reservation.sessionId,
       reservation,
     };

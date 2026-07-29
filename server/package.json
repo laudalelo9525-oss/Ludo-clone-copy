@@ -25,9 +25,9 @@
     "node": ">=22.12.0"
   },
   "dependencies": {
-    "@colyseus/core": "^0.17.45",
-    "@colyseus/schema": "^4.0.30",
-    "@colyseus/ws-transport": "^0.17.13",
+    "@colyseus/core": "^0.16.24",
+    "@colyseus/schema": "^3.0.76",
+    "@colyseus/ws-transport": "^0.16.5",
     "@nestjs/common": "^11.0.17",
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.0.1",

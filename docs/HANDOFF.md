@@ -27,6 +27,22 @@ dice and pawn animation, and the lobby.
 
 ---
 
+## Colyseus version pairing — do not "upgrade" this
+
+The server is pinned to **Colyseus 0.16** deliberately. The published browser
+SDK (`colyseus.js`, latest 0.16.x) depends on `@colyseus/schema ^3`, and **no
+0.17 client exists**. Running the 0.17 server made the client fail at join:
+0.17 returns a flat seat reservation where the 0.16 client expects a nested
+`room` object, and schema 4 state would not decode either.
+
+Verified working end to end after the downgrade: two `colyseus.js` clients
+joined the same room, the match started, the state decoded (seats, names,
+pawns, `connected`, `afk`), and a `ROLL_DICE` round-trip returned the expected
+payload.
+
+Bumping `@colyseus/core` to 0.17 again breaks every client until a 0.17
+`colyseus.js` ships.
+
 ## What is done and verified
 
 | Area | State |
@@ -64,10 +80,13 @@ cd client && npm run dev      # then open the printed URL on the phone
 4. **Issue 4.1 — LiveKit token generation.** Server-side and self-contained;
    needs LiveKit credentials eventually, but the token endpoint can be built
    and tested against fixtures first.
-5. **Issue 3.3 — join a live match from the client.** The protocol types and
-   matchmaking client exist; what is missing is consuming the seat
-   reservation, syncing room state, and rendering it. This is the most
-   satisfying next step because it makes the whole stack visible.
+5. **Issue 3.3 — join a live match from the client.** *Now unblocked.* The
+   protocol types, the matchmaking client and a proven-compatible SDK are all
+   in place; what is missing is a `LudoClient` that consumes the seat
+   reservation, subscribes to state, and drives the board render, plus a roll
+   button and pawn placement from live state. Start here — the interop probe
+   in the commit message for the 0.16 downgrade shows the exact calls that
+   work.
 
 ## Known gaps worth remembering
 

@@ -343,7 +343,7 @@ describe('LudoRoom', () => {
 
       // onDrop waits on the reconnection window, so it stays pending; the
       // takeover state it sets before awaiting is what matters here.
-      void room.onDrop(green);
+      void room.onLeave(green, false);
 
       expect(room.state.players.get('green-session')?.connected).toBe(false);
       expect(room.pendingDelayMs).toBe(20_000);
@@ -393,7 +393,7 @@ describe('LudoRoom', () => {
         .spyOn(room, 'allowReconnection')
         .mockReturnValue(reconnection as unknown as ReturnType<typeof room.allowReconnection>);
 
-      await room.onDrop(green);
+      await room.onLeave(green, false);
 
       expect(room.state.players.has('green-session')).toBe(true);
       expect(room.state.players.get('green-session')?.connected).toBe(true);
@@ -410,7 +410,7 @@ describe('LudoRoom', () => {
           >,
         );
 
-      await room.onDrop(green);
+      await room.onLeave(green, false);
 
       expect(room.state.players.has('green-session')).toBe(false);
     });
@@ -418,7 +418,7 @@ describe('LudoRoom', () => {
     it('removes a player who leaves on purpose', () => {
       const { room, green } = newRoom();
 
-      room.onLeave(green);
+      room.onLeave(green, true);
 
       expect(room.state.players.has('green-session')).toBe(false);
     });

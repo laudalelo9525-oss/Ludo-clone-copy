@@ -60,7 +60,7 @@ const BOT_ACTION_DELAY_MS = 700;
  * moving when someone rages out, loses signal, or puts their phone down
  * (Issue 6.2).
  */
-export class LudoRoom extends Room<{ state: LudoStateType }> {
+export class LudoRoom extends Room<LudoStateType> {
   /** Overridable so tests can drive a deterministic match. */
   protected dice: DiceRoller = new SecureDiceRoller();
 
@@ -77,7 +77,7 @@ export class LudoRoom extends Room<{ state: LudoStateType }> {
     this.turnTimeoutMs = options.turnTimeoutMs ?? DEFAULT_TURN_TIMEOUT_MS;
     this.maxClients = this.maxPlayers;
 
-    this.state = new LudoState();
+    this.setState(new LudoState());
     this.state.gameState = RoomStatus.Waiting;
     this.state.currentTurnSessionId = '';
     this.state.winnerSessionId = '';
@@ -102,26 +102,22 @@ export class LudoRoom extends Room<{ state: LudoStateType }> {
     }
   }
 
-  /** A client that left on purpose, or one whose reconnection window expired. */
-  override onLeave(client: Client): void {
-    this.state.players.delete(client.sessionId);
-    this.missedTurns.delete(client.sessionId);
-    this.armTurnTimer();
-  }
-
   /**
-   * An unexpected disconnect. The seat is held open so an interrupted player
-   * can pick the match back up (Issue 3.6), and the bot covers their turns in
-   * the meantime rather than stalling everyone else.
+   * A client left. A consented leave frees the seat immediately; an unexpected
+   * disconnect holds it open so an interrupted player can pick the match back
+   * up (Issue 3.6), with the bot covering their turns in the meantime rather
+   * than stalling everyone else.
    */
-  override async onDrop(client: Client): Promise<void> {
+  override async onLeave(client: Client, consented?: boolean): Promise<void> {
     const player = this.state.players.get(client.sessionId);
     if (!player) {
       return;
     }
 
-    if (this.state.gameState === RoomStatus.Finished) {
+    if (consented || this.state.gameState === RoomStatus.Finished) {
       this.state.players.delete(client.sessionId);
+      this.missedTurns.delete(client.sessionId);
+      this.armTurnTimer();
       return;
     }
 
