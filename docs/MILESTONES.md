@@ -49,10 +49,9 @@ offline play in the Unity client and the Phase 6 AI opponent from one
 implementation, and lets it be tested without an Editor.
 
 It is **not** the authoritative implementation for online play: the game server
-is TypeScript, so Issue 3.4 needs these rules mirrored there. Keeping two
-implementations honest is the job of `shared/` (board constants and rule
-parameters) plus contract tests in `tests/`; that mirroring is tracked as part
-of Issue 3.4 and is not done yet.
+is TypeScript and mirrors these rules itself (done in Issue 3.4, see
+`server/src/game/rules/`). Both implementations are pinned to
+`shared/board-constants.json` so neither can drift unnoticed.
 
 Because it is engine-agnostic, CI verifies it with `dotnet test` — no Unity
 licence needed — while the same test files also run in the Editor's Test Runner.
@@ -113,8 +112,7 @@ fail if either drifts — verified by deliberately changing a constant and
 watching each suite go red.
 
 Rules parity with the offline engine is covered by mirrored test suites. What
-the server does **not** have yet: persistence, auth (Issue 3.1), matchmaking
-beyond `joinOrCreate` (Issue 3.5), and turn timers.
+the server does **not** have yet: persistence and auth (Issue 3.1).
 
 ---
 
