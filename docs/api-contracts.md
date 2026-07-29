@@ -23,22 +23,46 @@
 
 ## 2. Real-Time Multiplayer (Colyseus WebSockets)
 
+Room name: **`ludo`** — `client.joinOrCreate("ludo", { name })` on the Colyseus
+port (2567 by default). Implemented in `server/src/game/rooms/`.
+
 ### Room State (Schema)
 ```typescript
-class LudoState extends Schema {
-  @type({ map: Player }) players = new MapSchema<Player>();
-  @type("string") currentTurnSessionId: string;
-  @type("uint8") diceValue: number;
-  @type("string") gameState: string; // WAITING, PLAYING, FINISHED
-}
+Player = schema({
+  sessionId: "string",
+  seat: "uint8",        // also fixes colour and start cell
+  name: "string",
+  pawns: ["int8"],      // relative positions: -1 yard, 0..51 track, 52..57 home column
+  connected: "boolean", // false while held open for reconnection
+});
+
+LudoState = schema({
+  players: { map: Player },
+  currentTurnSessionId: "string",
+  diceValue: "uint8",        // 0 when no roll is pending
+  gameState: "string",       // WAITING, PLAYING, FINISHED
+  winnerSessionId: "string",
+});
 ```
 
 ### Client Messages (Actions)
-- `ROLL_DICE`: Sent by active player to roll.
-- `MOVE_PAWN`: `{ "pawnIndex": number }` - Request to move a pawn.
-- `SEND_EMOTE`: `{ "emoteId": "string" }` - Broadcasts an emote.
+- `ROLL_DICE`: Sent by the active player to roll. Carries no payload — the
+  server generates the value.
+- `MOVE_PAWN`: `{ "pawnIndex": number }` — Request to move a pawn.
+- `SEND_EMOTE`: `{ "emoteId": "string" }` — Broadcasts an emote.
 
 ### Server Messages (Events)
-- `ON_DICE_ROLLED`: `{ "value": number, "player": "string" }`
-- `ON_PAWN_MOVED`: `{ "player": "string", "pawnIndex": number, "newPosition": number }`
+- `ON_DICE_ROLLED`: `{ "value": number, "player": "string", "movablePawns": number[] }`
+- `ON_PAWN_MOVED`: `{ "player": "string", "pawnIndex": number, "newPosition": number, "captures": [{ "player": "string", "pawnIndex": number }] }`
 - `ON_TURN_CHANGED`: `{ "nextPlayer": "string" }`
+- `ON_EMOTE`: `{ "player": "string", "emoteId": "string" }`
+- `ON_REJECTED`: `{ "message": "string", "reason": "string" }` — sent only to
+  the client whose request was refused.
+
+### Authority
+The server decides dice values and legal moves. A request that is out of turn,
+out of phase, or names a pawn that cannot legally move is answered with
+`ON_REJECTED` and changes nothing, so a modified client gains no advantage.
+
+Board constants shared with the Unity client live in
+`shared/board-constants.json`; both rule implementations are tested against it.

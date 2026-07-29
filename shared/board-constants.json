@@ -1,0 +1,20 @@
+{
+  "_comment": [
+    "Canonical Ludo board constants. The C# offline engine",
+    "(client/Assets/Scripts/Gameplay) and the authoritative TypeScript server",
+    "(server/src/game/rules) each implement the rules in their own language, so",
+    "this file is the single source of truth they are both tested against.",
+    "Changing a value here fails both test suites until both engines follow."
+  ],
+  "mainTrackLength": 52,
+  "homeColumnLength": 6,
+  "pawnsPerPlayer": 4,
+  "yardPosition": -1,
+  "homeColumnEntry": 52,
+  "homePosition": 57,
+  "yardExitRoll": 6,
+  "consecutiveSixesLimit": 3,
+  "seatSpacing": 13,
+  "safeCells": [0, 8, 13, 21, 26, 34, 39, 47],
+  "seatOrder": ["Red", "Green", "Yellow", "Blue"]
+}

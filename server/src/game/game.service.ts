@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Server } from '@colyseus/core';
 import { WebSocketTransport } from '@colyseus/ws-transport';
 import { ColyseusConfig } from '../config/configuration';
+import { LudoRoom } from './rooms/ludo-room';
 
 /**
  * Owns the authoritative Colyseus game server.
@@ -11,11 +12,14 @@ import { ColyseusConfig } from '../config/configuration';
  * HTTP port, matching the SDD where the REST gateway and the realtime game
  * server are separately addressable and independently scalable.
  *
- * Room definitions (`LudoRoom` and its state schema) are added in Phase 3,
- * Issue 3.2 — this class only owns the transport lifecycle.
+ * Room definitions are registered here; the rules themselves live in
+ * `rules/` and the wire contract in `rooms/`.
  */
 @Injectable()
 export class GameService implements OnModuleInit, OnApplicationShutdown {
+  /** Room name clients pass to joinOrCreate; part of the client contract. */
+  static readonly LUDO_ROOM = 'ludo';
+
   private readonly logger = new Logger(GameService.name);
   private gameServer: Server | null = null;
 
@@ -29,8 +33,13 @@ export class GameService implements OnModuleInit, OnApplicationShutdown {
       greet: false,
     });
 
+    this.gameServer.define(GameService.LUDO_ROOM, LudoRoom);
+
     await this.gameServer.listen(port);
-    this.logger.log(`Colyseus realtime server listening on ws://0.0.0.0:${port}`);
+    this.logger.log(
+      `Colyseus realtime server listening on ws://0.0.0.0:${port} ` +
+        `(room "${GameService.LUDO_ROOM}")`,
+    );
   }
 
   async onApplicationShutdown(): Promise<void> {

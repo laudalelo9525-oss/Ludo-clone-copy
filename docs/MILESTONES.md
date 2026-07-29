@@ -73,11 +73,33 @@ Editor (see Issue 1.5).
 ## 🟠 Phase 3: Online Multiplayer (Claude Code)
 **Objective:** Real-time multiplayer synchronization using Colyseus.
 - [ ] **Issue 3.1**: Integrate Firebase Auth in Unity and NestJS.
-- [ ] **Issue 3.2**: Create Colyseus `LudoRoom` state schema on the backend.
+- [x] **Issue 3.2**: Create Colyseus `LudoRoom` state schema on the backend.
 - [ ] **Issue 3.3**: Implement client-side Colyseus connection and state sync.
-- [ ] **Issue 3.4**: Move dice RNG and move validation to the authoritative server.
+- [x] **Issue 3.4**: Move dice RNG and move validation to the authoritative server.
 - [ ] **Issue 3.5**: Build the matchmaking queue and room creation API.
 - [ ] **Issue 3.6**: Implement network reconnection and state recovery logic.
+      *(Server half done: a dropped player's seat is held for 60s and the state
+      resyncs on return. The client half needs Issue 3.3.)*
+
+### Authoritative server notes
+The room is registered as `ludo`; clients reach it with
+`joinOrCreate("ludo")` on the Colyseus port.
+
+The server owns every rule decision. Dice come from `SecureDiceRoller`, which
+uses the crypto RNG rather than `Math.random` — the latter's stream is
+reconstructable from observed output, which would let a client predict rolls.
+Client messages carry no state: `MOVE_PAWN` names a pawn index and nothing
+else, and anything out of turn, out of phase, or not in the server's legal move
+list is answered with `ON_REJECTED` while the board stays untouched.
+
+Because the server is TypeScript and the offline engine is C#, the rules exist
+twice. Both are pinned to `shared/board-constants.json`, and both test suites
+fail if either drifts — verified by deliberately changing a constant and
+watching each suite go red.
+
+Rules parity with the offline engine is covered by mirrored test suites. What
+the server does **not** have yet: persistence, auth (Issue 3.1), matchmaking
+beyond `joinOrCreate` (Issue 3.5), and turn timers.
 
 ---
 
