@@ -8,16 +8,41 @@ checklist; this is the context around it.
 
 ---
 
-## The one thing blocking the client
+## OPEN DECISION — the client platform
 
-**The Unity project has never been opened in an Editor.** Everything under
-`client/` is a skeleton plus engine-agnostic C#. Until someone opens it once,
-Unity cannot generate the `.meta` files, the scene files, or the rest of
-`ProjectSettings/`, and the C# has never been through the Unity compiler.
+**The blueprint assumes Unity, but the only available development machine is an
+Android phone, and the Unity Editor does not run on Android** (Windows, macOS
+and Linux x86_64 only; no ARM build, no cloud editor). So the Unity client has
+never been opened, and cannot be from the current setup.
 
-The steps are in `client/README.md`. Nothing else in the repo depends on this —
-the rules engine and the AI are verified in CI without Unity — but no Unity
-work (Issues 2.1, 2.3 visuals, 3.3) can start until it happens.
+Three viable paths, awaiting a decision:
+
+| Path | Authoring on Android | CI verification |
+| ---- | -------------------- | --------------- |
+| **TypeScript web client** (recommended) | Yes — code in Termux, preview in a browser | Full |
+| **Godot** | Yes — Godot ships an Android editor (ARM64) | Partial (headless export) |
+| **Unity, code-first in CI** | No visual editing at all | Licence + slow builds |
+
+The web client is recommended because the server is already TypeScript and
+Colyseus' first-party SDK (`colyseus.js`) is too, so the client can share
+`shared/` types with the server rather than adding a third rules
+implementation. It also targets Web, Android (via Capacitor) and desktop from
+one codebase, which is what the blueprint's platform list asks for.
+
+**Nothing has been deleted yet.** If Unity is dropped, the affected code is:
+
+- `client/` — Unity skeleton (ProjectSettings, Packages, asmdefs, Editor
+  scripts, `GameBootstrap`, `ServerEndpoints`).
+- `client/Assets/Scripts/Gameplay/` — the C# rules engine and AI opponent
+  (~1,500 lines, 51 tests). These are engine-agnostic but would have no
+  consumer without a C#/Unity client; the server's TypeScript engine is the
+  authoritative one and is complete.
+- `tests/RulesEngine/` and the `rules-engine` CI job, which exist to test that
+  C# code.
+- The C# half of the `shared/board-constants.json` contract.
+
+All of it stays recoverable in git history. The server is unaffected either
+way — it has its own complete rules implementation.
 
 ---
 
@@ -26,8 +51,8 @@ work (Issues 2.1, 2.3 visuals, 3.3) can start until it happens.
 | Area | State |
 | ---- | ----- |
 | Backend foundation | NestJS gateway (`:3000`) + Colyseus (`:2567`), config, `/health`, Docker image, CI |
-| Offline rules engine (C#) | Board, moves, turn machine, captures, undo — 51 tests |
-| Offline AI | Easy/Medium/Hard, measured ladder — see `MILESTONES.md` |
+| Offline rules engine (C#) | Board, moves, turn machine, captures, undo — 51 tests. *Fate depends on the client decision above.* |
+| Offline AI | Easy/Medium/Hard, measured ladder — see `MILESTONES.md`. *Same.* |
 | Authoritative server | `ludo` room, server-side dice and validation, AFK bot takeover, matchmaking tickets — 76 tests |
 | Rule-drift protection | `shared/board-constants.json`, asserted by both suites |
 
@@ -60,7 +85,7 @@ scripts/dev-stack.sh          # Postgres + Redis + backend in watch mode
 4. **Issue 4.1 — LiveKit token generation.** Server-side and self-contained;
    needs LiveKit credentials eventually, but the token endpoint can be built
    and tested against fixtures first.
-5. **Unity work** (2.1, 2.3 visuals, 3.3) — gated on the Editor step above.
+5. **Client work** (2.1, 2.3 visuals, 3.3) — gated on the platform decision above.
 
 ## Known gaps worth remembering
 
