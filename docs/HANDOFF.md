@@ -68,26 +68,20 @@ removed again, to keep `npm ci` light on a phone. To repeat it: install
 `executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome'`, and
 point two pages at the preview server.
 
-## UNVERIFIED — tap-to-move needs a browser check
+## Tap-to-move — verified in a browser
 
-The latest commit adds tap-a-pawn-to-move, player panels, movable-pawn
-highlighting and board gradients. Types, unit tests and the build all pass,
-**but the interactive path was never confirmed in a browser.** Two attempts
-failed for environmental reasons, not code:
+Confirmed on a clean run at phone size: two players seated, eight pawns drawn,
+**11 turns offered a movable pawn and all 11 taps moved a piece**, no console
+errors. Tapping a pawn on the board is the move input; there are no move
+buttons.
 
-1. Playwright's click waits for an element to stop moving; the `bob` animation
-   on a movable pawn never settles, so the click timed out. Use
-   `click({ force: true })`.
-2. The retry showed **three player rows for two clients** — almost certainly a
-   stale server from the previous run still holding a disconnected seat for its
-   60s reconnection window, not a panel bug. Kill old `dist/main` processes and
-   use fresh ports before trusting a run.
+Two traps when re-checking this:
 
-**First job next session:** run the client, roll until a six, and confirm a
-movable pawn pulses and moves when tapped. If `movable` never populates, look
-at `onDiceRolled` in `client/src/main.ts` — it filters on
-`event.player === client.sessionId`, and that is the likeliest thing to be
-wrong.
+1. Playwright's click waits for an element to stop moving, and a movable pawn
+   pulses forever — use `click({ force: true })`.
+2. Kill old `node dist/main` processes and use fresh ports first. A stale
+   server holds a disconnected seat for 60 seconds, which once showed three
+   player rows for two clients and looked like a panel bug.
 
 ## How to verify locally
 
