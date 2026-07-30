@@ -12,12 +12,18 @@ import { type MatchView, isMyTurn, pawnSprites, statusLine } from './game/match-
 import { isMuted, play, toggleMute } from './game/audio';
 import { buzz, flash } from './game/effects';
 import { dieFace, pawnPiece } from './game/pieces';
-import { LudoClient } from './net/ludo-client';
+import { LudoClient, type LudoClientEvents } from './net/ludo-client';
+import { MatchmakingApi } from './net/matchmaking';
+import { type LobbyChoice, isValidChoice, lobbyHtml, normaliseName } from './ui/lobby';
 
 const SEAT_COLOURS = ['#e5484d', '#30a46c', '#f5d90a', '#0090ff'] as const;
 const SEAT_SHADES = ['#c1272d', '#1d7a4c', '#c9a800', '#0066cc'] as const;
 
 const client = new LudoClient(config.colyseusUrl);
+const matchmaking = new MatchmakingApi(config.restBaseUrl);
+let choice: LobbyChoice = { name: '', gameMode: 'CLASSIC', players: 2 };
+let searching = false;
+let inMatch = false;
 let view: MatchView | null = null;
 /** Pawn indices the server said may move; empty outside your own turn. */
 let movable: number[] = [];
@@ -264,80 +270,133 @@ function refreshControls(root: HTMLElement): void {
   }
 }
 
+/** The pre-match screen: name, mode, seat count. */
+function renderLobby(root: HTMLElement): void {
+  root.innerHTML = lobbyHtml(choice, searching, notice);
+
+  const name = root.querySelector<HTMLInputElement>('#name');
+  name?.addEventListener('input', () => {
+    choice = { ...choice, name: name.value };
+  });
+
+  root.querySelectorAll<HTMLElement>('.mode').forEach((button) => {
+    button.addEventListener('click', () => {
+      choice = { ...choice, gameMode: button.dataset.mode as LobbyChoice['gameMode'] };
+      renderLobby(root);
+    });
+  });
+
+  root.querySelectorAll<HTMLElement>('.seats').forEach((button) => {
+    button.addEventListener('click', () => {
+      choice = { ...choice, players: Number(button.dataset.seats) as LobbyChoice['players'] };
+      renderLobby(root);
+    });
+  });
+
+  root.querySelector('#play')?.addEventListener('click', () => void startMatch(root));
+}
+
+/** Takes a ticket from the gateway, then joins the seat it reserved. */
+async function startMatch(root: HTMLElement): Promise<void> {
+  choice = { ...choice, name: normaliseName(choice.name) };
+
+  if (!isValidChoice(choice)) {
+    notice = 'Pick a mode and a number of players.';
+    renderLobby(root);
+    return;
+  }
+
+  searching = true;
+  notice = '';
+  renderLobby(root);
+
+  try {
+    const ticket = await matchmaking.requestMatch(choice.gameMode, choice.players, choice.name);
+
+    if (ticket.status !== 'FOUND' || !ticket.reservation) {
+      throw new Error(ticket.error ?? 'No seat was available.');
+    }
+
+    await client.joinWithReservation(ticket.reservation, matchEvents(root));
+    inMatch = true;
+    play('move');
+  } catch (error) {
+    searching = false;
+    notice = error instanceof Error ? error.message : 'Could not find a match.';
+    renderLobby(root);
+  }
+}
+
 const root = document.getElementById('app');
 
-if (root) {
-  render(root);
+function matchEvents(root: HTMLElement): LudoClientEvents {
+  return {
+    onState: (next: MatchView) => {
+      const firstState = view === null || !inMatch;
+      view = next;
+      notice = '';
 
-  void client
-    .join(`Player ${Math.floor(Math.random() * 900 + 100)}`, {
-      onState: (next) => {
-        const firstState = view === null;
-        view = next;
-        notice = '';
+      // A turn that is not ours has nothing for us to move.
+      if (!isMyTurn(next, client.sessionId)) {
+        movable = [];
+      }
 
-        // A turn that is not ours has nothing for us to move.
-        if (!isMyTurn(next, client.sessionId)) {
-          movable = [];
-        }
-
-        if (firstState || !movePawnsInPlace(root)) {
-          render(root);
-        } else {
-          refreshControls(root);
-        }
-
-        if (next.status === 'FINISHED') {
-          flash(root.querySelector('.board'), 'win');
-          play('win');
-          buzz([0, 80, 80, 80, 80, 160]);
-        }
-      },
-      onDiceRolled: (event) => {
-        tumbleDie(root, event.value);
-        if (event.player !== client.sessionId) {
-          play('roll');
-        }
-
-        // The server decides which pawns are legal; the client only highlights.
-        movable = event.player === client.sessionId ? event.movablePawns : [];
-        movePawnsInPlace(root);
+      if (firstState || !movePawnsInPlace(root)) {
+        render(root);
+      } else {
         refreshControls(root);
-      },
-      onPawnMoved: (event) => {
-        // Captures and arrivals are announced by the server, so every client
-        // reacts to the same events rather than guessing from state diffs.
-        for (const capture of event.captures) {
-          const victim = view?.players.find((player) => player.sessionId === capture.player);
-          if (victim) {
-            flash(root.querySelector(`#pawn-${victim.seat}-${capture.pawnIndex}`), 'capture');
-          }
-        }
+      }
 
-        play(event.captures.length > 0 ? 'capture' : 'move');
+      if (next.status === 'FINISHED') {
+        flash(root.querySelector('.board'), 'win');
+        play('win');
+        buzz([0, 80, 80, 80, 80, 160]);
+      }
+    },
+    onDiceRolled: (event) => {
+      tumbleDie(root, event.value);
+      if (event.player !== client.sessionId) {
+        play('roll');
+      }
 
-        if (event.captures.length > 0) {
-          buzz([0, 40, 60, 40]);
+      // The server decides which pawns are legal; the client only highlights.
+      movable = event.player === client.sessionId ? event.movablePawns : [];
+      movePawnsInPlace(root);
+      refreshControls(root);
+    },
+    onPawnMoved: (event) => {
+      // Captures and arrivals are announced by the server, so every client
+      // reacts to the same events rather than guessing from state diffs.
+      for (const capture of event.captures) {
+        const victim = view?.players.find((player) => player.sessionId === capture.player);
+        if (victim) {
+          flash(root.querySelector(`#pawn-${victim.seat}-${capture.pawnIndex}`), 'capture');
         }
+      }
 
-        const mover = view?.players.find((player) => player.sessionId === event.player);
-        if (mover && event.newPosition === 57) {
-          flash(root.querySelector(`#pawn-${mover.seat}-${event.pawnIndex}`), 'home');
-          play('home');
-        }
-      },
-      onRejected: (event) => {
-        notice = event.reason;
-        render(root);
-      },
-      onDisconnected: () => {
-        notice = 'Disconnected. Reload to rejoin — your seat is held briefly.';
-        render(root);
-      },
-    })
-    .catch((error: unknown) => {
-      notice = `Could not reach the game server at ${config.colyseusUrl}.`;
-      console.error(error);
+      play(event.captures.length > 0 ? 'capture' : 'move');
+
+      if (event.captures.length > 0) {
+        buzz([0, 40, 60, 40]);
+      }
+
+      const mover = view?.players.find((player) => player.sessionId === event.player);
+      if (mover && event.newPosition === 57) {
+        flash(root.querySelector(`#pawn-${mover.seat}-${event.pawnIndex}`), 'home');
+        play('home');
+      }
+    },
+    onRejected: (event) => {
+      notice = event.reason;
       render(root);
-    });
+    },
+    onDisconnected: () => {
+      notice = 'Disconnected. Reload to rejoin — your seat is held briefly.';
+      render(root);
+    },
+  };
+}
+
+if (root) {
+  renderLobby(root);
 }

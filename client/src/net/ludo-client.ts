@@ -41,7 +41,22 @@ export class LudoClient {
   /** Joins a match, creating one if no room has a free seat. */
   async join(name: string, events: LudoClientEvents): Promise<void> {
     const client = new Client(this.colyseusUrl);
-    const room = await client.joinOrCreate(LUDO_ROOM, { name });
+    this.attach(await client.joinOrCreate(LUDO_ROOM, { name }), events);
+  }
+
+  /**
+   * Joins the seat the gateway already reserved for a matchmaking ticket.
+   *
+   * Consuming the reservation rather than calling joinOrCreate again is what
+   * makes the ticket meaningful: the player lands in the room the matchmaker
+   * picked, not whichever room happens to have space a moment later.
+   */
+  async joinWithReservation(reservation: unknown, events: LudoClientEvents): Promise<void> {
+    const client = new Client(this.colyseusUrl);
+    this.attach(await client.consumeSeatReservation(reservation as never), events);
+  }
+
+  private attach(room: Room, events: LudoClientEvents): void {
     this.room = room;
 
     room.onStateChange((state) => events.onState(toMatchView(state)));

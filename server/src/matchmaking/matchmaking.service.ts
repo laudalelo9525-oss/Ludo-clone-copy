@@ -15,6 +15,9 @@ import {
   TicketStatus,
 } from './matchmaking.types';
 
+/** Longest display name a player may be seated under. */
+const NAME_MAX = 16;
+
 /** Tickets older than this are forgotten; clients re-queue. */
 const TICKET_TTL_MS = 5 * 60 * 1000;
 
@@ -52,9 +55,14 @@ export class MatchmakingService {
     };
 
     try {
+      // The name rides along with the reservation, otherwise the room seats
+      // the player under a generated fallback and the lobby entry is lost.
+      const name = this.sanitiseName(request?.name);
+
       const seat = await this.matchmaker.joinOrCreate(GameService.LUDO_ROOM, {
         gameMode,
         maxPlayers: players,
+        ...(name ? { name } : {}),
       });
 
       ticket.status = TicketStatus.Found;
@@ -78,6 +86,16 @@ export class MatchmakingService {
   getTicket(ticketId: string): Ticket | null {
     this.pruneExpired();
     return this.tickets.get(ticketId) ?? null;
+  }
+
+  /** Trims a display name; anything unusable is dropped rather than rejected. */
+  private sanitiseName(value: unknown): string | undefined {
+    if (typeof value !== 'string') {
+      return undefined;
+    }
+
+    const cleaned = value.trim().replace(/\s+/g, ' ').slice(0, NAME_MAX);
+    return cleaned.length > 0 ? cleaned : undefined;
   }
 
   private validateGameMode(value: unknown): GameMode {

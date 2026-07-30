@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { ClientMessage, RoomStatus, ServerMessage } from './protocol';
+import { ClientMessage, GAME_MODES, RoomStatus, ServerMessage } from './protocol';
 
 /**
  * The server owns these names. Reading its source keeps the two in step
@@ -9,6 +9,10 @@ import { ClientMessage, RoomStatus, ServerMessage } from './protocol';
  */
 const serverMessages = readFileSync(
   new URL('../../../server/src/game/rooms/messages.ts', import.meta.url),
+  'utf8',
+);
+const serverMatchmaking = readFileSync(
+  new URL('../../../server/src/matchmaking/matchmaking.types.ts', import.meta.url),
   'utf8',
 );
 const serverState = readFileSync(
@@ -27,5 +31,9 @@ describe('wire protocol', () => {
 
   it.each(Object.values(RoomStatus))('server uses room status %s', (value) => {
     expect(serverState).toContain(`'${value}'`);
+  });
+
+  it.each(GAME_MODES)('gateway accepts game mode %s', (mode) => {
+    expect(serverMatchmaking).toContain(`'${mode}'`);
   });
 });

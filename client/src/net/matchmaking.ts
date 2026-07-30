@@ -5,11 +5,11 @@ export class MatchmakingApi {
   constructor(private readonly baseUrl: string) {}
 
   /** Requests a seat. The returned ticket carries the seat reservation. */
-  async requestMatch(gameMode: GameMode, players: 2 | 4): Promise<MatchTicket> {
+  async requestMatch(gameMode: GameMode, players: 2 | 4, name?: string): Promise<MatchTicket> {
     const response = await fetch(`${this.baseUrl}/matchmaking/ticket`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ gameMode, players }),
+      body: JSON.stringify({ gameMode, players, ...(name ? { name } : {}) }),
     });
 
     if (!response.ok) {

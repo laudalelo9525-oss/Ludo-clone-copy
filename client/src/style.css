@@ -345,3 +345,71 @@ button.icon {
     animation: none;
   }
 }
+
+/* --- Lobby ----------------------------------------------------------- */
+.lobby {
+  width: min(100%, 26rem);
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  text-align: center;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  text-align: left;
+  font-size: 0.8rem;
+  opacity: 0.85;
+}
+
+.field input {
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 0.8rem;
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  backdrop-filter: blur(8px);
+}
+
+.modes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.mode {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  align-items: flex-start;
+  text-align: left;
+  padding: 0.7rem 0.9rem;
+}
+
+.mode small {
+  font-weight: 400;
+  font-size: 0.7rem;
+  opacity: 0.65;
+}
+
+.seat-picker {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.mode.on,
+.seats.on {
+  border-color: transparent;
+  outline: 2px solid #6f7bff;
+  background: rgba(111, 123, 255, 0.18);
+}
+
+button.primary {
+  padding: 0.95rem 1rem;
+  font-size: 1.05rem;
+  background: linear-gradient(180deg, #6f7bff, #4a55e0);
+  border-color: transparent;
+}

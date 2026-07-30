@@ -15,6 +15,8 @@ export enum TicketStatus {
 export interface CreateTicketRequest {
   gameMode: GameMode;
   players: PlayerCount;
+  /** Display name to seat the player under; optional, the room names them if absent. */
+  name?: string;
 }
 
 /**

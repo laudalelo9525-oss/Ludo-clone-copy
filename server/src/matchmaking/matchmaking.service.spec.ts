@@ -59,6 +59,18 @@ describe('MatchmakingService', () => {
     });
   });
 
+  it('passes a display name through to the room', async () => {
+    await service.createTicket({ gameMode: 'CLASSIC', players: 2, name: '  Ada  Lovelace  ' });
+
+    expect(matchmaker.calls[0].options).toMatchObject({ name: 'Ada Lovelace' });
+  });
+
+  it('omits the name when none is usable, letting the room name the player', async () => {
+    await service.createTicket({ gameMode: 'CLASSIC', players: 2, name: '   ' });
+
+    expect(matchmaker.calls[0].options).not.toHaveProperty('name');
+  });
+
   it('looks a ticket up again by id', async () => {
     const created = await service.createTicket({ gameMode: 'QUICK', players: 2 });
 

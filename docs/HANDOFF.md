@@ -70,6 +70,10 @@ point two pages at the preview server.
 
 ## Verified in a browser
 
+**Lobby**: name, mode and seat count, then a real match. Verified two browsers
+picking names, taking tickets from `POST /matchmaking/ticket`, consuming the
+seat reservations and landing in the same room seated as "Ada" and "Grace".
+
 **Sound and dice tumble**: a full match with 217 oscillator starts per client,
 all six die faces observed mid-roll plus the blank face, and a working mute
 toggle. Chromium needs `--autoplay-policy=no-user-gesture-required` to make
@@ -122,8 +126,7 @@ cd client && npm run dev      # then open the printed URL on the phone
    and tested against fixtures first.
 5. **Polish the match loop.** Pieces, dice tumble, motion, tap-to-move,
    capture/home/win feedback and sound are all done and verified in a browser.
-   What is left: a lobby with mode selection wired to the matchmaking ticket
-   endpoint, automatic reconnection using the room's reconnection token (the
+   What is left: automatic reconnection using the room's reconnection token (the
    client currently asks the player to reload), and offline play against the
    AI (Issue 6.1, needs redoing in TypeScript).
 

@@ -64,4 +64,7 @@ export interface MatchTicket {
   error?: string;
 }
 
-export type GameMode = 'CLASSIC' | 'QUICK' | 'MASTER' | 'TOURNAMENT';
+/** Modes the gateway accepts; mirrors server/src/matchmaking/matchmaking.types.ts. */
+export const GAME_MODES = ['CLASSIC', 'QUICK', 'MASTER', 'TOURNAMENT'] as const;
+
+export type GameMode = (typeof GAME_MODES)[number];
