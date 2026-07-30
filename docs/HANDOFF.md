@@ -4,7 +4,12 @@ Living status note for picking work back up. `docs/MILESTONES.md` is the
 checklist; this is the context around it.
 
 **Branch:** `claude/code-quality-readme-alignment-v5ffqu` (not merged into
-`Code` yet). Every commit is green in CI.
+`Code` yet). HEAD is green in CI. Three commits before it were red on
+**backend lint only** — `@typescript-eslint/no-floating-promises` on an
+un-awaited `room.onLeave(...)` in a room test — because the tests were run
+locally but `npm run lint` was not. Fixed. Run the lint step too before
+pushing; CI runs lint *before* the tests and skips them when it fails, so a
+red run can hide a green suite.
 
 ---
 
@@ -140,8 +145,10 @@ Two traps when re-checking this:
 ## How to verify locally
 
 ```bash
-cd server && npm ci && npm test && npm run test:e2e   # 93 + 1
-cd client && npm ci && npm test && npm run build      # 22
+# Same order as CI. Lint gates the rest there, so do not skip it.
+cd server && npm ci && npm run lint && npm run format:check \
+  && npm test && npm run test:e2e && npm run build      # 93 + 1
+cd client && npm ci && npm test && npm run build        # 67
 scripts/dev-stack.sh          # Postgres + Redis + backend in watch mode
 cd client && npm run dev      # then open the printed URL on the phone
 ```
