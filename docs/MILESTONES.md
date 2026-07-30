@@ -77,10 +77,10 @@ wiring the client to a live match. The client now renders the board grid; see
 - [x] **Issue 3.4**: Move dice RNG and move validation to the authoritative server.
 - [x] **Issue 3.5**: Build the matchmaking queue and room creation API.
       *(Quick match done; private rooms and invite codes still open.)*
-- [ ] **Issue 3.6**: Implement network reconnection and state recovery logic.
-      *(Server holds a dropped seat for 60s and the client is told it dropped;
-      what is missing is the client automatically re-joining with its
-      reconnection token instead of asking the player to reload.)*
+- [x] **Issue 3.6**: Implement network reconnection and state recovery logic.
+      *(Server holds a dropped seat for 60s; the client now reclaims it
+      automatically with its reconnection token, backing off over a window that
+      fits inside the server's.)*
 
 ### Matchmaking notes
 `POST /matchmaking/ticket` validates the mode and seat count, reserves a seat

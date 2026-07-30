@@ -70,6 +70,17 @@ point two pages at the preview server.
 
 ## Verified in a browser
 
+**Auto-reconnect**: severing the game socket with an abnormal close (4999) in
+one browser produced a **second socket** and the player stayed seated with
+controls intact and the match continuing. Socket count is the reliable signal —
+`setOffline(true)` does **not** sever an already-open WebSocket, so an earlier
+attempt with it proved nothing.
+
+*Open question:* the "Connection lost — reconnecting" notice was never observed
+during recovery. Recovery takes ~700ms so it may simply be too brief to catch,
+or `onReconnecting` may not be reaching the UI. Worth 10 minutes: slow the
+first retry, or log in the handler, and confirm the message actually shows.
+
 **Lobby**: name, mode and seat count, then a real match. Verified two browsers
 picking names, taking tickets from `POST /matchmaking/ticket`, consuming the
 seat reservations and landing in the same room seated as "Ada" and "Grace".
@@ -126,9 +137,8 @@ cd client && npm run dev      # then open the printed URL on the phone
    and tested against fixtures first.
 5. **Polish the match loop.** Pieces, dice tumble, motion, tap-to-move,
    capture/home/win feedback and sound are all done and verified in a browser.
-   What is left: automatic reconnection using the room's reconnection token (the
-   client currently asks the player to reload), and offline play against the
-   AI (Issue 6.1, needs redoing in TypeScript).
+   What is left: offline play against the AI (Issue 6.1, needs redoing in
+   TypeScript), and confirming the reconnecting notice actually appears.
 
 ## Known gaps worth remembering
 

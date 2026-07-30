@@ -1,5 +1,6 @@
 import { Client, type Room } from 'colyseus.js';
 import { type MatchView, type PlayerView } from '../game/match-view';
+import { MAX_RECONNECT_ATTEMPTS, reconnectDelayMs, shouldReconnect } from './reconnect';
 import {
   ClientMessage,
   type DiceRolledEvent,
@@ -10,6 +11,10 @@ import {
 } from './protocol';
 
 export interface LudoClientEvents {
+  /** A drop is being retried; `attempt` is 1-based. */
+  onReconnecting?(attempt: number, maxAttempts: number): void;
+  /** The seat was recovered and play continues. */
+  onReconnected?(): void;
   /** Fires on every state change, with a plain snapshot. */
   onState(view: MatchView): void;
   /** A die was rolled — carries which pawns the server will accept a move for. */
@@ -31,6 +36,11 @@ export interface LudoClientEvents {
  */
 export class LudoClient {
   private room: Room | null = null;
+  private sdk: Client | null = null;
+  /** Handed out by the server so a dropped player can reclaim their seat. */
+  private reconnectionToken: string | null = null;
+  private events: LudoClientEvents | null = null;
+  private reconnecting = false;
 
   constructor(private readonly colyseusUrl: string) {}
 
@@ -41,6 +51,7 @@ export class LudoClient {
   /** Joins a match, creating one if no room has a free seat. */
   async join(name: string, events: LudoClientEvents): Promise<void> {
     const client = new Client(this.colyseusUrl);
+    this.sdk = client;
     this.attach(await client.joinOrCreate(LUDO_ROOM, { name }), events);
   }
 
@@ -53,11 +64,14 @@ export class LudoClient {
    */
   async joinWithReservation(reservation: unknown, events: LudoClientEvents): Promise<void> {
     const client = new Client(this.colyseusUrl);
+    this.sdk = client;
     this.attach(await client.consumeSeatReservation(reservation as never), events);
   }
 
   private attach(room: Room, events: LudoClientEvents): void {
     this.room = room;
+    this.events = events;
+    this.reconnectionToken = room.reconnectionToken ?? null;
 
     room.onStateChange((state) => events.onState(toMatchView(state)));
 
@@ -87,8 +101,48 @@ export class LudoClient {
 
     room.onLeave((code) => {
       this.room = null;
+
+      if (shouldReconnect(code)) {
+        void this.recoverSeat();
+        return;
+      }
+
       events.onDisconnected?.(code);
     });
+  }
+
+  /**
+   * Walks the backoff, trying to reclaim the seat the server is holding.
+   * Falls back to reporting the disconnect once the window is spent.
+   */
+  private async recoverSeat(): Promise<void> {
+    const events = this.events;
+    const token = this.reconnectionToken;
+
+    if (this.reconnecting || !this.sdk || !token || !events) {
+      events?.onDisconnected?.(1006);
+      return;
+    }
+
+    this.reconnecting = true;
+
+    for (let attempt = 1; attempt <= MAX_RECONNECT_ATTEMPTS; attempt++) {
+      events.onReconnecting?.(attempt, MAX_RECONNECT_ATTEMPTS);
+      await new Promise((resolve) => setTimeout(resolve, reconnectDelayMs(attempt)));
+
+      try {
+        const room = await this.sdk.reconnect(token);
+        this.reconnecting = false;
+        this.attach(room, events);
+        events.onReconnected?.();
+        return;
+      } catch {
+        // Seat may still be held; keep trying until the window closes.
+      }
+    }
+
+    this.reconnecting = false;
+    events.onDisconnected?.(1006);
   }
 
   roll(): void {
