@@ -390,6 +390,15 @@ function matchEvents(root: HTMLElement): LudoClientEvents {
       notice = event.reason;
       render(root);
     },
+    onReconnecting: (attempt: number, maxAttempts: number) => {
+      notice = `Connection lost — reconnecting (${attempt}/${maxAttempts})…`;
+      render(root);
+    },
+    onReconnected: () => {
+      notice = '';
+      play('move');
+      render(root);
+    },
     onDisconnected: () => {
       notice = 'Disconnected. Reload to rejoin — your seat is held briefly.';
       render(root);

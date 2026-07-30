@@ -76,37 +76,17 @@ controls intact and the match continuing. Socket count is the reliable signal �
 `setOffline(true)` does **not** sever an already-open WebSocket, so an earlier
 attempt with it proved nothing.
 
-**CONFIRMED GAP — the reconnecting notice never renders.** Re-tested polling
-every 15ms (not 60ms), so this is not a timing artifact: during a recovery that
-demonstrably works (socket count 1 -> 2, seat kept, play continues), `.notice`
-never has text at any point. `onReconnecting` is not reaching the UI.
+The reconnecting notice is now confirmed too: severing the socket showed
+"Connection lost — reconnecting (1/6)…", which cleared on recovery with the
+seat kept. The earlier gap was a wiring bug, not a timing artifact — see the
+lesson below.
 
-User impact is small but real: the board freezes for about a second with no
-explanation, then resumes.
-
-Next step, in order:
-1. Put a `console.log` in `onReconnecting` in `client/src/main.ts` and confirm
-   whether the handler fires at all.
-2. If it does not, the suspect is `LudoClient.recoverSeat` bailing early — it
-   returns via `onDisconnected` when `this.reconnectionToken` is null, and the
-   token is read in `attach()` from `room.reconnectionToken`, which may be
-   empty on the 0.16 SDK. Log the token at join.
-3. If the token is null, something *else* is opening the second socket, and the
-   recovery is not ours — worth knowing before trusting it further.
-
-**Lobby**: name, mode and seat count, then a real match. Verified two browsers
-picking names, taking tickets from `POST /matchmaking/ticket`, consuming the
-seat reservations and landing in the same room seated as "Ada" and "Grace".
-
-**Sound and dice tumble**: a full match with 217 oscillator starts per client,
-all six die faces observed mid-roll plus the blank face, and a working mute
-toggle. Chromium needs `--autoplay-policy=no-user-gesture-required` to make
-audio testable without a real tap.
-
-**Effects** (capture flash, home pop, win glow): a full match played to a
-winner with the effect classes appearing 70+ times on both clients. Note the
-instrument: a `MutationObserver` on `documentElement` reported zero and was
-wrong — poll for `[class*="fx-"]` instead, which is what proved them working.
+**Lesson worth keeping:** the handlers had never been added to `main.ts`. An
+earlier scripted edit anchored on `      onDisconnected:` (6 spaces) after a
+refactor had re-indented it to 4, so the replacement silently did nothing —
+and because `LudoClient` calls `events.onReconnecting?.()`, the missing handler
+failed silently too. When a scripted edit is used, assert the anchor matched
+(`assert s.count(old) == 1`) rather than trusting a no-op replace.
 
 ## Tap-to-move — verified in a browser
 
