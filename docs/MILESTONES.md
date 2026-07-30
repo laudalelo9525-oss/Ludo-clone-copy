@@ -127,7 +127,18 @@ What the server does **not** have yet: persistence and auth (Issue 3.1).
 
 ## 🟣 Phase 5: Social Systems & DB (Claude Code)
 **Objective:** Friends, profiles, and leaderboards.
-- [ ] **Issue 5.1**: Implement PostgreSQL Prisma/TypeORM models in NestJS.
+- [x] **Issue 5.1**: Implement PostgreSQL persistence in NestJS.
+      *(Matches are recorded: ONGOING on start, COMPLETED on a win, ABORTED
+      when the room dies mid-match. Plain `pg` against `database/schema.sql`
+      rather than Prisma/TypeORM — the schema is already written and versioned
+      there, and entity classes would give the same tables a second definition
+      that can drift. Persistence is optional: with no `DATABASE_URL` the
+      server wires a no-op repository and plays identically, which is how CI
+      and phone-only development run it. **Caveats:** per-player results
+      (`match_players`) wait on Issue 3.1, since that table references
+      `users`; and the Postgres SQL itself is unverified against a live
+      database — no Docker daemon is available in this environment — while
+      the no-DB path has been played end to end.)*
 - [ ] **Issue 5.2**: Build Friends system (Add, Accept, Remove) and Presence via Redis.
 - [ ] **Issue 5.3**: Create Global and Friends Leaderboard APIs.
 - [ ] **Issue 5.4**: Implement Player Profiles and Match History UI in the client.

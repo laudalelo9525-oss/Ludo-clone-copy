@@ -17,10 +17,16 @@ export interface ColyseusConfig {
   port: number;
 }
 
+export interface DatabaseConfig {
+  /** Postgres connection string, or undefined to run without persistence. */
+  url?: string;
+}
+
 export interface AppConfig {
   nodeEnv: 'development' | 'test' | 'production';
   http: HttpConfig;
   colyseus: ColyseusConfig;
+  database: DatabaseConfig;
 }
 
 const DEFAULT_HTTP_PORT = 3000;
@@ -57,6 +63,11 @@ export function loadConfiguration(): AppConfig {
     },
     colyseus: {
       port: toInt(process.env.COLYSEUS_PORT, DEFAULT_COLYSEUS_PORT),
+    },
+    database: {
+      // Absent is a supported setup, not a misconfiguration: the game runs
+      // without a database and simply stores nothing.
+      url: process.env.DATABASE_URL || undefined,
     },
   };
 }

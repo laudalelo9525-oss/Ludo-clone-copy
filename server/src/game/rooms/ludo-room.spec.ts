@@ -1,4 +1,5 @@
 import { type Client } from '@colyseus/core';
+import { matchRecorder } from '../../persistence/match-recorder';
 import { ScriptedDiceRoller } from '../rules/dice';
 import { type DiceRoller } from '../rules/types';
 import { LudoRoom } from './ludo-room';
@@ -415,12 +416,91 @@ describe('LudoRoom', () => {
       expect(room.state.players.has('green-session')).toBe(false);
     });
 
-    it('removes a player who leaves on purpose', () => {
+    it('removes a player who leaves on purpose', async () => {
       const { room, green } = newRoom();
 
-      room.onLeave(green, true);
+      await room.onLeave(green, true);
 
       expect(room.state.players.has('green-session')).toBe(false);
+    });
+  });
+
+  describe('match history (Issue 5.1)', () => {
+    interface Stored {
+      started: string[];
+      finished: { matchId: string | null; outcome: string }[];
+    }
+
+    function recordInto(): Stored {
+      const stored: Stored = { started: [], finished: [] };
+
+      matchRecorder.use({
+        recordStarted: (record) => {
+          stored.started.push(record.gameMode);
+          return Promise.resolve('match-1');
+        },
+        recordFinished: (matchId, _endedAt, outcome) => {
+          stored.finished.push({ matchId, outcome });
+          return Promise.resolve();
+        },
+      });
+
+      return stored;
+    }
+
+    afterEach(() => {
+      // The recorder is a process-wide singleton; leave it inert for other suites.
+      matchRecorder.use({
+        recordStarted: () => Promise.resolve(null),
+        recordFinished: () => Promise.resolve(),
+      });
+    });
+
+    /** Storing is deliberately not awaited by the room, so tests drain it. */
+    const settled = () => new Promise((resolve) => setImmediate(resolve));
+
+    it('records the match when play begins', async () => {
+      const stored = recordInto();
+      newRoom();
+
+      await settled();
+
+      expect(stored.started).toEqual(['CLASSIC']);
+    });
+
+    it('completes the record when someone wins', async () => {
+      const stored = recordInto();
+      const { room, red } = newRoom(2);
+      await settled();
+      room['match']!.state.positions[0] = [55, 57, 57, 57];
+
+      room.roll(red);
+      room.move(red, 0);
+
+      expect(stored.finished).toEqual([{ matchId: 'match-1', outcome: 'COMPLETED' }]);
+    });
+
+    it('aborts the record when the room dies mid-match', async () => {
+      const stored = recordInto();
+      const { room } = newRoom();
+      await settled();
+
+      room.onDispose();
+
+      expect(stored.finished).toEqual([{ matchId: 'match-1', outcome: 'ABORTED' }]);
+    });
+
+    it('does not abort a match that already finished', async () => {
+      const stored = recordInto();
+      const { room, red } = newRoom(2);
+      await settled();
+      room['match']!.state.positions[0] = [55, 57, 57, 57];
+
+      room.roll(red);
+      room.move(red, 0);
+      room.onDispose();
+
+      expect(stored.finished).toEqual([{ matchId: 'match-1', outcome: 'COMPLETED' }]);
     });
   });
 });

@@ -44,13 +44,43 @@ payload.
 Bumping `@colyseus/core` to 0.17 again breaks every client until a 0.17
 `colyseus.js` ships.
 
+---
+
+## Persistence — optional on purpose (Issue 5.1)
+
+`DATABASE_URL` unset is a **supported setup**, not a misconfiguration.
+`PersistenceModule` wires `PostgresMatchRepository` when the URL is present and
+`NoopMatchRepository` when it is not, so the game runs on nothing but Node —
+which is what development on a phone and CI both look like.
+
+Three things worth knowing before touching this:
+
+- **Colyseus builds rooms itself**, so a room cannot be injected into. The
+  module-level `matchRecorder` singleton exists for exactly that: `GameService`
+  hands it the repository once at startup, and rooms call it.
+- **Storing is never awaited** by the room and failures are swallowed with a
+  warning. A database hiccup must not stall a match in progress.
+- **Plain SQL, no ORM.** `database/schema.sql` already defines the tables;
+  entity classes would give them a second definition that can drift — the same
+  duplication this project removed everywhere else.
+
+A room writes `ONGOING` when play starts, `COMPLETED` on a win, and `ABORTED`
+from `onDispose` if it dies mid-match — otherwise abandoned rooms would leave
+rows `ONGOING` forever.
+
+Verified: the built server booted with **no `DATABASE_URL`**, a solo match was
+played to a win through the real `colyseus.js` client (75 human turns, zero
+`ON_REJECTED`), and the server log stayed clean. The Postgres SQL itself is
+**not** verified against a live database — no Docker daemon here.
+
 ## What is done and verified
 
 | Area | State |
 | ---- | ----- |
 | Backend foundation | NestJS gateway (`:3000`) + Colyseus (`:2567`), config, `/health`, Docker image, CI |
 | Client | Vite + TypeScript; joins a live match, renders pawns from synced state, sends roll/move — 29 tests |
-| Authoritative server | `ludo` room, server-side dice and validation, AFK bot takeover, matchmaking tickets — 76 tests |
+| Authoritative server | `ludo` room, server-side dice and validation, AFK bot takeover, matchmaking tickets — 93 tests |
+| Match history | Matches recorded to Postgres when `DATABASE_URL` is set; a no-op repository otherwise |
 | Rule-drift protection | `shared/board-constants.json`, asserted by both suites |
 
 CI runs three jobs on every push: backend (lint/format/test/e2e/build), client
@@ -110,7 +140,7 @@ Two traps when re-checking this:
 ## How to verify locally
 
 ```bash
-cd server && npm ci && npm test && npm run test:e2e   # 76 + 1
+cd server && npm ci && npm test && npm run test:e2e   # 93 + 1
 cd client && npm ci && npm test && npm run build      # 22
 scripts/dev-stack.sh          # Postgres + Redis + backend in watch mode
 cd client && npm run dev      # then open the printed URL on the phone
@@ -124,23 +154,25 @@ cd client && npm run dev      # then open the printed URL on the phone
    trusted as identity, which is fine locally and unacceptable in public. Needs
    a Firebase project, and a decision: anonymous auth for guests, or real
    accounts only?
-2. **Issue 5.1 — persistence.** Nothing is stored; a finished match evaporates.
-   `database/schema.sql` already has the tables. Pure server work, testable in
-   CI. This is the largest gap after auth.
-3. **Private rooms and invite codes.** The remainder of Issue 3.5 — quick match
+2. **Private rooms and invite codes.** The remainder of Issue 3.5 — quick match
    works, invite flows do not.
 4. **Issue 4.1 — LiveKit token generation.** Server-side and self-contained;
    needs LiveKit credentials eventually, but the token endpoint can be built
    and tested against fixtures first.
-5. **Polish the match loop.** Pieces, dice tumble, motion, tap-to-move,
+4. **Polish the match loop.** Pieces, dice tumble, motion, tap-to-move,
    capture/home/win feedback and sound are all done and verified in a browser.
    Done. The match loop is complete: lobby, matchmaking, solo vs AI, live
    play, feedback, sound, and recovery from a dropped connection.
 
 ## Known gaps worth remembering
 
-- **No persistence anywhere.** Matches, users and inventory exist only in
-  memory.
+- **Persistence stops at the match row.** `matches` is written; `users`,
+  `match_players` and `inventory` are not. Per-player results wait on auth,
+  because `match_players` references `users`.
+- **The Postgres path has never run against a live database.** There is no
+  Docker daemon in the dev container, so the SQL is only as good as
+  `database/schema.sql` says. The no-`DATABASE_URL` path *has* been played end
+  to end. Worth pointing at a real Postgres once one is reachable.
 - **No auth.** Any client can claim any session id.
 - **Blocking rule not implemented** (two pawns barring a cell) — deliberate,
   documented as a Custom Rules option in both engines.

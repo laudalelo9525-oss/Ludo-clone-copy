@@ -9,10 +9,21 @@ describe('loadConfiguration', () => {
     delete process.env.COLYSEUS_PORT;
     delete process.env.CORS_ORIGINS;
     delete process.env.NODE_ENV;
+    delete process.env.DATABASE_URL;
   });
 
   afterAll(() => {
     process.env = originalEnv;
+  });
+
+  it('treats a missing DATABASE_URL as running without persistence', () => {
+    delete process.env.DATABASE_URL;
+    expect(loadConfiguration().database.url).toBeUndefined();
+  });
+
+  it('picks up a configured database', () => {
+    process.env.DATABASE_URL = 'postgresql://localhost/ludo';
+    expect(loadConfiguration().database.url).toBe('postgresql://localhost/ludo');
   });
 
   it('falls back to the documented defaults', () => {

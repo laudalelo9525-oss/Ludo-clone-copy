@@ -1,8 +1,10 @@
-import { Injectable, Logger, OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Server } from '@colyseus/core';
 import { WebSocketTransport } from '@colyseus/ws-transport';
 import { ColyseusConfig } from '../config/configuration';
+import { MATCH_REPOSITORY, type MatchRepository } from '../persistence/match-record';
+import { matchRecorder } from '../persistence/match-recorder';
 import { LudoRoom } from './rooms/ludo-room';
 
 /**
@@ -23,7 +25,10 @@ export class GameService implements OnModuleInit, OnApplicationShutdown {
   private readonly logger = new Logger(GameService.name);
   private gameServer: Server | null = null;
 
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly configService: ConfigService,
+    @Inject(MATCH_REPOSITORY) private readonly matches: MatchRepository,
+  ) {}
 
   async onModuleInit(): Promise<void> {
     const { port } = this.configService.getOrThrow<ColyseusConfig>('colyseus');
@@ -32,6 +37,10 @@ export class GameService implements OnModuleInit, OnApplicationShutdown {
       transport: new WebSocketTransport(),
       greet: false,
     });
+
+    // Rooms are built by Colyseus, so the repository is handed over rather
+    // than injected.
+    matchRecorder.use(this.matches);
 
     this.gameServer.define(GameService.LUDO_ROOM, LudoRoom);
 

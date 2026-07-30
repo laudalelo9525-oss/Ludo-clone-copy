@@ -1,6 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { GameService } from './game.service';
+import { MATCH_REPOSITORY } from '../persistence/match-record';
 
 describe('GameService', () => {
   let service: GameService;
@@ -9,6 +10,13 @@ describe('GameService', () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
       providers: [
         GameService,
+        {
+          provide: MATCH_REPOSITORY,
+          useValue: {
+            recordStarted: () => Promise.resolve(null),
+            recordFinished: () => Promise.resolve(),
+          },
+        },
         {
           provide: ConfigService,
           // Port 0 asks the OS for a free port, keeping the suite isolated

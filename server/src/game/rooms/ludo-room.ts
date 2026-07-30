@@ -4,6 +4,7 @@ import { type BotDifficulty, pickBotMove } from '../rules/bot';
 import { SecureDiceRoller } from '../rules/dice';
 import { LudoMatch } from '../rules/ludo-match';
 import { type DiceRoller, GamePhase, type MoveResult } from '../rules/types';
+import { matchRecorder } from '../../persistence/match-recorder';
 import {
   ClientMessage,
   type MovePawnPayload,
@@ -28,6 +29,8 @@ export interface LudoRoomOptions {
   bots?: number;
   /** How strongly those opponents play. */
   botDifficulty?: BotDifficulty;
+  /** Mode the match is played under; recorded with the match history. */
+  gameMode?: string;
 }
 
 /** Something scheduled that can be cancelled; satisfied by Colyseus' Delayed. */
@@ -74,6 +77,9 @@ export class LudoRoom extends Room<LudoStateType> {
   private turnTimeoutMs = DEFAULT_TURN_TIMEOUT_MS;
   private turnTimer: ScheduledTask | null = null;
   private botDifficulty: BotDifficulty = 'HARD';
+  private gameMode = 'CLASSIC';
+  /** Row id for this match, or null when nothing is being stored. */
+  private matchId: string | null = null;
 
   /** Consecutive auto-played turns, by session id. */
   private readonly missedTurns = new Map<string, number>();
@@ -91,6 +97,7 @@ export class LudoRoom extends Room<LudoStateType> {
 
     // Solo play seats AI opponents up front, so the match starts as soon as
     // the human arrives instead of waiting for people who are not coming.
+    this.gameMode = options.gameMode ?? 'CLASSIC';
     const bots = Math.min(Math.max(options.bots ?? 0, 0), this.maxPlayers - 1);
     this.botDifficulty = options.botDifficulty ?? 'HARD';
 
@@ -155,6 +162,13 @@ export class LudoRoom extends Room<LudoStateType> {
   override onDispose(): void {
     this.turnTimer?.clear();
     this.turnTimer = null;
+
+    // A room that dies mid-match — everyone left, the process is shutting
+    // down — would otherwise leave the row ONGOING forever.
+    if (this.matchId) {
+      void matchRecorder.finished(this.matchId, new Date(), 'ABORTED');
+      this.matchId = null;
+    }
   }
 
   /** True when this room was created for solo play. */
@@ -180,6 +194,13 @@ export class LudoRoom extends Room<LudoStateType> {
     this.state.diceValue = 0;
     this.syncTurn();
     this.armTurnTimer();
+
+    // Storing must never hold up a match, so it is not awaited.
+    void matchRecorder
+      .started({ roomId: this.roomId, gameMode: this.gameMode, startedAt: new Date() })
+      .then((id) => {
+        this.matchId = id;
+      });
   }
 
   protected handleRollDice(client: Client): void {
@@ -269,6 +290,8 @@ export class LudoRoom extends Room<LudoStateType> {
     });
 
     if (result.wins) {
+      void matchRecorder.finished(this.matchId, new Date(), 'COMPLETED');
+      this.matchId = null;
       this.state.gameState = RoomStatus.Finished;
       this.state.winnerSessionId = sessionId;
       this.state.currentTurnSessionId = '';
