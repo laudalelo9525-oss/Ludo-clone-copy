@@ -76,10 +76,23 @@ controls intact and the match continuing. Socket count is the reliable signal �
 `setOffline(true)` does **not** sever an already-open WebSocket, so an earlier
 attempt with it proved nothing.
 
-*Open question:* the "Connection lost — reconnecting" notice was never observed
-during recovery. Recovery takes ~700ms so it may simply be too brief to catch,
-or `onReconnecting` may not be reaching the UI. Worth 10 minutes: slow the
-first retry, or log in the handler, and confirm the message actually shows.
+**CONFIRMED GAP — the reconnecting notice never renders.** Re-tested polling
+every 15ms (not 60ms), so this is not a timing artifact: during a recovery that
+demonstrably works (socket count 1 -> 2, seat kept, play continues), `.notice`
+never has text at any point. `onReconnecting` is not reaching the UI.
+
+User impact is small but real: the board freezes for about a second with no
+explanation, then resumes.
+
+Next step, in order:
+1. Put a `console.log` in `onReconnecting` in `client/src/main.ts` and confirm
+   whether the handler fires at all.
+2. If it does not, the suspect is `LudoClient.recoverSeat` bailing early — it
+   returns via `onDisconnected` when `this.reconnectionToken` is null, and the
+   token is read in `attach()` from `room.reconnectionToken`, which may be
+   empty on the 0.16 SDK. Log the token at join.
+3. If the token is null, something *else* is opening the second socket, and the
+   recovery is not ours — worth knowing before trusting it further.
 
 **Lobby**: name, mode and seat count, then a real match. Verified two browsers
 picking names, taking tickets from `POST /matchmaking/ticket`, consuming the
