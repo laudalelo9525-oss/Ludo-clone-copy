@@ -147,3 +147,25 @@ button:disabled {
   color: #ffb4a9;
   font-size: 0.85rem;
 }
+
+/* Pawns move between cells rather than jumping. */
+.pawn {
+  transition: transform 320ms cubic-bezier(0.34, 1.2, 0.64, 1);
+}
+
+.pawn-shadow {
+  fill: rgba(15, 16, 32, 0.28);
+}
+
+.pawn.mine path,
+.pawn.mine circle:not([opacity]) {
+  stroke: #fff;
+  stroke-width: 0.035;
+}
+
+.die {
+  width: 3rem;
+  height: 3rem;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 0.35rem 0.5rem rgba(0, 0, 0, 0.45));
+}

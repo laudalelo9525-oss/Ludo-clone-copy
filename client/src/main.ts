@@ -9,6 +9,7 @@ import {
   yardCorner,
 } from './game/board-geometry';
 import { type MatchView, isMyTurn, pawnSprites, statusLine } from './game/match-view';
+import { dieFace, pawnPiece } from './game/pieces';
 import { LudoClient } from './net/ludo-client';
 
 const SEAT_COLOURS = ['#e5484d', '#30a46c', '#f5d90a', '#0090ff'] as const;
@@ -68,14 +69,16 @@ function boardSvg(): string {
     <polygon points="9,9 6,9 7.5,7.5" fill="${SEAT_COLOURS[3]}" />
     <polygon points="6,9 6,6 7.5,7.5" fill="${SEAT_COLOURS[0]}" />`;
 
+  // Pawns are rendered once and then moved by transform, so a move animates
+  // instead of teleporting.
   const pawns = view
     ? pawnSprites(view, client.sessionId)
         .map(
           (sprite) =>
-            `<g class="pawn${sprite.mine ? ' mine' : ''}">
-               <circle cx="${sprite.cell.x + 0.5}" cy="${sprite.cell.y + 0.5}" r="0.34" fill="${
-                 SEAT_COLOURS[sprite.seat] ?? '#fff'
-               }" />
+            `<g class="pawn${sprite.mine ? ' mine' : ''}" id="pawn-${sprite.seat}-${
+              sprite.pawnIndex
+            }" transform="translate(${sprite.cell.x + 0.5} ${sprite.cell.y + 0.38})">
+               ${pawnPiece(SEAT_COLOURS[sprite.seat] ?? '#fff')}
              </g>`,
         )
         .join('')
@@ -97,6 +100,7 @@ function render(root: HTMLElement): void {
       <p class="status">${view ? statusLine(view, client.sessionId) : 'Connecting…'}</p>
       <div class="board">${boardSvg()}</div>
       <div class="controls">
+        ${dieFace(view?.diceValue ?? 0)}
         <button id="roll" ${myTurn && !canMove ? '' : 'disabled'}>Roll</button>
         ${
           canMove
@@ -121,6 +125,70 @@ function render(root: HTMLElement): void {
   });
 }
 
+/**
+ * Slides pawns to their new cells. Returns false when the board is not on
+ * screen yet, or a pawn is missing, so the caller falls back to a full render.
+ */
+function movePawnsInPlace(root: HTMLElement): boolean {
+  if (!view) {
+    return false;
+  }
+
+  const sprites = pawnSprites(view, client.sessionId);
+  const nodes = sprites.map((sprite) =>
+    root.querySelector(`#pawn-${sprite.seat}-${sprite.pawnIndex}`),
+  );
+
+  if (nodes.some((node) => node === null)) {
+    return false;
+  }
+
+  sprites.forEach((sprite, index) => {
+    nodes[index]?.setAttribute(
+      'transform',
+      `translate(${sprite.cell.x + 0.5} ${sprite.cell.y + 0.38})`,
+    );
+  });
+
+  return true;
+}
+
+/** Updates the status line, die and buttons without redrawing the board. */
+function refreshControls(root: HTMLElement): void {
+  if (!view) {
+    return;
+  }
+
+  const status = root.querySelector('.status');
+  if (status) {
+    status.textContent = statusLine(view, client.sessionId);
+  }
+
+  const controls = root.querySelector('.controls');
+  const myTurn = isMyTurn(view, client.sessionId);
+  const canMove = myTurn && view.diceValue > 0;
+
+  if (controls) {
+    controls.innerHTML = `
+      ${dieFace(view.diceValue)}
+      <button id="roll" ${myTurn && !canMove ? '' : 'disabled'}>Roll</button>
+      ${
+        canMove
+          ? [0, 1, 2, 3]
+              .map(
+                (pawn) => `<button class="pawn-btn" data-pawn="${pawn}">Pawn ${pawn + 1}</button>`,
+              )
+              .join('')
+          : ''
+      }`;
+
+    controls.querySelector('#roll')?.addEventListener('click', () => client.roll());
+    controls.querySelectorAll<HTMLElement>('.pawn-btn').forEach((button) => {
+      button.addEventListener('click', () => client.movePawn(Number(button.dataset.pawn)));
+    });
+  }
+}
+
 const root = document.getElementById('app');
 
 if (root) {
@@ -129,9 +197,15 @@ if (root) {
   void client
     .join(`Player ${Math.floor(Math.random() * 900 + 100)}`, {
       onState: (next) => {
+        const firstState = view === null;
         view = next;
         notice = '';
-        render(root);
+
+        if (firstState || !movePawnsInPlace(root)) {
+          render(root);
+        } else {
+          refreshControls(root);
+        }
       },
       onRejected: (event) => {
         // The server refused the request; showing why beats silently ignoring it.
