@@ -68,3 +68,8 @@ export interface MatchTicket {
 export const GAME_MODES = ['CLASSIC', 'QUICK', 'MASTER', 'TOURNAMENT'] as const;
 
 export type GameMode = (typeof GAME_MODES)[number];
+
+/** AI strengths the gateway accepts. */
+export const BOT_DIFFICULTIES = ['EASY', 'MEDIUM', 'HARD'] as const;
+
+export type BotDifficulty = (typeof BOT_DIFFICULTIES)[number];

@@ -9,7 +9,9 @@
 
 ### Matchmaking
 - `POST /matchmaking/ticket`
-  - **Body**: `{ "gameMode": "CLASSIC" | "QUICK" | "MASTER" | "TOURNAMENT", "players": 2 | 4 }`
+  - **Body**: `{ "gameMode": "CLASSIC" | "QUICK" | "MASTER" | "TOURNAMENT", "players": 2 | 4, "name"?: string, "bots"?: number, "botDifficulty"?: "EASY" | "MEDIUM" | "HARD" }`
+  - `bots` seats AI opponents and creates a **private** room, so nobody is
+    matched into someone else's solo game. It cannot exceed `players - 1`.
   - **Response**: `{ "ticketId": "string", "status": "FOUND", "roomId": "string", "sessionId": "string", "serverUrl": "string", "reservation": { ... } }`
   - `400` when the mode or seat count is not one of the values above.
   - `status` is `FAILED` (with `error`) when no seat could be reserved; the

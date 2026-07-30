@@ -21,6 +21,8 @@ export const Player = schema({
   connected: 'boolean',
   /** True while the bot is covering this player's turns (Issue 6.2). */
   afk: 'boolean',
+  /** True when the seat is an AI opponent rather than a person (Issue 6.1). */
+  isBot: 'boolean',
 });
 
 export type PlayerState = InstanceType<typeof Player>;
@@ -46,6 +48,13 @@ export const RoomStatus = {
   Finished: 'FINISHED',
 } as const;
 
+/** Seats an AI opponent, which never has a client behind it. */
+export function createBot(seat: number, name: string): PlayerState {
+  const bot = createPlayer(`bot-${seat}`, seat, name);
+  bot.isBot = true;
+  return bot;
+}
+
 export function createPlayer(sessionId: string, seat: number, name: string): PlayerState {
   const player = new Player();
   player.sessionId = sessionId;
@@ -53,6 +62,7 @@ export function createPlayer(sessionId: string, seat: number, name: string): Pla
   player.name = name;
   player.connected = true;
   player.afk = false;
+  player.isBot = false;
 
   for (let pawn = 0; pawn < PAWNS_PER_PLAYER; pawn++) {
     player.pawns.push(-1);

@@ -1,4 +1,4 @@
-import { GAME_MODES, type GameMode } from '../net/protocol';
+import { BOT_DIFFICULTIES, type BotDifficulty, GAME_MODES, type GameMode } from '../net/protocol';
 
 /** Seat counts a match supports. */
 export type PlayerCount = 2 | 4;
@@ -8,6 +8,9 @@ export interface LobbyChoice {
   name: string;
   gameMode: GameMode;
   players: PlayerCount;
+  /** True to fill the other seats with AI rather than wait for people. */
+  solo: boolean;
+  botDifficulty: BotDifficulty;
 }
 
 const NAME_MAX = 16;
@@ -27,8 +30,18 @@ export function isValidChoice(choice: LobbyChoice): boolean {
     choice.name.length > 0 &&
     choice.name.length <= NAME_MAX &&
     (GAME_MODES as readonly string[]).includes(choice.gameMode) &&
-    (choice.players === 2 || choice.players === 4)
+    (choice.players === 2 || choice.players === 4) &&
+    (BOT_DIFFICULTIES as readonly string[]).includes(choice.botDifficulty)
   );
+}
+
+/** How many AI opponents a choice implies. */
+export function botCount(choice: LobbyChoice): number {
+  return choice.solo ? choice.players - 1 : 0;
+}
+
+function choiceSolo(choice: LobbyChoice): boolean {
+  return choice.solo;
 }
 
 const MODE_BLURB: Record<GameMode, string> = {
@@ -66,7 +79,19 @@ export function lobbyHtml(selected: LobbyChoice, busy: boolean, error: string): 
       </label>
       <div class="modes">${modes}</div>
       <div class="seat-picker">${seats}</div>
-      <button id="play" class="primary" ${busy ? 'disabled' : ''}>${busy ? 'Finding a match…' : 'Play'}</button>
+      <div class="seat-picker">
+        <button class="opponent${choiceSolo(selected) ? '' : ' on'}" data-solo="0" ${busy ? 'disabled' : ''}>vs People</button>
+        <button class="opponent${choiceSolo(selected) ? ' on' : ''}" data-solo="1" ${busy ? 'disabled' : ''}>vs AI</button>
+      </div>
+      ${
+        choiceSolo(selected)
+          ? `<div class="seat-picker">${BOT_DIFFICULTIES.map(
+              (level) =>
+                `<button class="level${level === selected.botDifficulty ? ' on' : ''}" data-level="${level}" ${busy ? 'disabled' : ''}>${level.charAt(0) + level.slice(1).toLowerCase()}</button>`,
+            ).join('')}</div>`
+          : ''
+      }
+      <button id="play" class="primary" ${busy ? 'disabled' : ''}>${busy ? (choiceSolo(selected) ? 'Starting…' : 'Finding a match…') : 'Play'}</button>
       ${error ? `<p class="notice">${error}</p>` : ''}
     </section>`;
 }

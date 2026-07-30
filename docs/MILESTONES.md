@@ -137,15 +137,21 @@ What the server does **not** have yet: persistence and auth (Issue 3.1).
 
 ## 🔴 Phase 6: Monetization & AI (Claude Code)
 **Objective:** Shop, passes, and bot logic.
-- [ ] **Issue 6.1**: Implement Offline AI opponent (Easy/Medium/Hard).
-      *(Was done in C#; removed with Unity. Needs redoing in TypeScript — the
-      server's `bot.ts` is a working starting point.)*
+- [x] **Issue 6.1**: Implement Offline AI opponent (Easy/Medium/Hard).
+      *(Solo play: the lobby offers "vs AI" with a difficulty, and the room
+      seats AI opponents that play themselves.)*
 
 ### AI opponent notes
-**The offline C# AI was removed with Unity.** The surviving implementation is
-the server's auto-play bot (`server/src/game/rules/bot.ts`, Issue 6.2), which
-mirrors the same considerations. An offline opponent for the web client is
-still to be written, in TypeScript, on top of the server's rules module.
+Solo play is **server-side**: choosing "vs AI" creates a private room seated
+with AI opponents that play themselves. It needs a connection, so it is not
+offline in the literal sense — but it keeps the rules in exactly one place,
+which is the trade the whole architecture is built around. A true offline mode
+would mean shipping the rules to the client again and re-opening the drift risk
+that removing Unity closed.
+
+One `bot.ts` serves both this and the AFK takeover (Issue 6.2). Difficulty is
+expressed as what an opponent is blind to, not search depth: Hard weighs
+danger, Medium ignores it, Easy barely plans.
 
 The original C# opponent, and the measured difficulty ladder below, are in git
 history (commit `f83d491`).

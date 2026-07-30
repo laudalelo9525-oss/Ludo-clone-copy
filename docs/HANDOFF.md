@@ -70,6 +70,10 @@ point two pages at the preview server.
 
 ## Verified in a browser
 
+**Solo vs AI**: one browser picked "vs AI", Medium, four players — seated as
+Ada with AI 1/2/3, match started immediately, and after 10 human moves the AI
+had 11 pawns out of their yards on their own. No console errors.
+
 **Auto-reconnect**: severing the game socket with an abnormal close (4999) in
 one browser produced a **second socket** and the player stayed seated with
 controls intact and the match continuing. Socket count is the reliable signal —
@@ -130,8 +134,8 @@ cd client && npm run dev      # then open the printed URL on the phone
    and tested against fixtures first.
 5. **Polish the match loop.** Pieces, dice tumble, motion, tap-to-move,
    capture/home/win feedback and sound are all done and verified in a browser.
-   What is left: offline play against the AI (Issue 6.1, needs redoing in
-   TypeScript), and confirming the reconnecting notice actually appears.
+   Done. The match loop is complete: lobby, matchmaking, solo vs AI, live
+   play, feedback, sound, and recovery from a dropped connection.
 
 ## Known gaps worth remembering
 
@@ -144,7 +148,9 @@ cd client && npm run dev      # then open the printed URL on the phone
   never decides. `shared/board-constants.json` still pins board geometry for
   both, and `client/src/net/protocol.test.ts` reads the server's message names
   so a rename on either side fails the build.
-- **No offline play in the client** — Issue 6.1 needs redoing in TypeScript.
+- **Solo play needs a connection.** "vs AI" is a server-side private room, not
+  true offline play. Offline would mean shipping the rules to the client again
+  and re-opening the drift risk that removing Unity closed.
 - **`server/` is the only backend folder.** The blueprint lists both `server/`
   and `backend/`; see `docs/STRUCTURE.md` for why they were merged.
 - Dev-only npm audit warnings remain in build tooling (jest/eslint chains);

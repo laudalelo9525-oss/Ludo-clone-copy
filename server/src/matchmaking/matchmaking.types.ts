@@ -6,6 +6,10 @@ export type GameMode = (typeof GAME_MODES)[number];
 export const PLAYER_COUNTS = [2, 4] as const;
 export type PlayerCount = (typeof PLAYER_COUNTS)[number];
 
+/** Strengths the lobby may ask for. */
+export const BOT_DIFFICULTIES = ['EASY', 'MEDIUM', 'HARD'] as const;
+export type BotDifficulty = (typeof BOT_DIFFICULTIES)[number];
+
 export enum TicketStatus {
   Searching = 'SEARCHING',
   Found = 'FOUND',
@@ -17,6 +21,10 @@ export interface CreateTicketRequest {
   players: PlayerCount;
   /** Display name to seat the player under; optional, the room names them if absent. */
   name?: string;
+  /** AI opponents to play against; 0 (default) means a match with people. */
+  bots?: number;
+  /** How strongly those opponents play. */
+  botDifficulty?: BotDifficulty;
 }
 
 /**
@@ -49,6 +57,8 @@ export interface Ticket {
  */
 export interface RoomMatchmaker {
   joinOrCreate(roomName: string, options: Record<string, unknown>): Promise<SeatReservation>;
+  /** Creates a fresh room nobody else can be matched into. */
+  create(roomName: string, options: Record<string, unknown>): Promise<SeatReservation>;
 }
 
 export const ROOM_MATCHMAKER = Symbol('ROOM_MATCHMAKER');

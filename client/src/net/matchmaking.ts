@@ -1,15 +1,25 @@
-import type { GameMode, MatchTicket } from './protocol';
+import type { BotDifficulty, GameMode, MatchTicket } from './protocol';
+
+/** Everything the gateway needs to seat a player. */
+export interface MatchRequest {
+  gameMode: GameMode;
+  players: 2 | 4;
+  name?: string;
+  /** AI opponents to play against; omit or 0 for a match with people. */
+  bots?: number;
+  botDifficulty?: BotDifficulty;
+}
 
 /** Talks to the NestJS gateway's matchmaking endpoints. */
 export class MatchmakingApi {
   constructor(private readonly baseUrl: string) {}
 
   /** Requests a seat. The returned ticket carries the seat reservation. */
-  async requestMatch(gameMode: GameMode, players: 2 | 4, name?: string): Promise<MatchTicket> {
+  async requestMatch(request: MatchRequest): Promise<MatchTicket> {
     const response = await fetch(`${this.baseUrl}/matchmaking/ticket`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ gameMode, players, ...(name ? { name } : {}) }),
+      body: JSON.stringify(request),
     });
 
     if (!response.ok) {

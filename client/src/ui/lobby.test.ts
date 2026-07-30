@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { type LobbyChoice, isValidChoice, lobbyHtml, normaliseName } from './lobby';
+import { type LobbyChoice, botCount, isValidChoice, lobbyHtml, normaliseName } from './lobby';
 
-const choice: LobbyChoice = { name: 'Ada', gameMode: 'CLASSIC', players: 4 };
+const choice: LobbyChoice = {
+  name: 'Ada',
+  gameMode: 'CLASSIC',
+  players: 4,
+  solo: false,
+  botDifficulty: 'HARD',
+};
 
 describe('lobby', () => {
   it('trims and collapses whitespace in a name', () => {
@@ -40,6 +46,21 @@ describe('lobby', () => {
 
     expect(html).toContain('Finding a match…');
     expect((html.match(/disabled/g) ?? []).length).toBeGreaterThan(5);
+  });
+
+  it('fills the other seats with AI in solo, and none otherwise', () => {
+    expect(botCount({ ...choice, solo: true })).toBe(3);
+    expect(botCount({ ...choice, solo: true, players: 2 })).toBe(1);
+    expect(botCount(choice)).toBe(0);
+  });
+
+  it('offers difficulties only when playing solo', () => {
+    expect(lobbyHtml({ ...choice, solo: true }, false, '')).toContain('data-level="EASY"');
+    expect(lobbyHtml(choice, false, '')).not.toContain('data-level=');
+  });
+
+  it('rejects an unknown difficulty', () => {
+    expect(isValidChoice({ ...choice, botDifficulty: 'GOD' as never })).toBe(false);
   });
 
   it('shows an error when one is given', () => {

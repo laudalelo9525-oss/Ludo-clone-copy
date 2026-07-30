@@ -9,11 +9,24 @@ import {
 } from './matchmaking.types';
 
 class StubMatchmaker implements RoomMatchmaker {
-  readonly calls: Array<{ roomName: string; options: Record<string, unknown> }> = [];
+  readonly calls: Array<{ roomName: string; options: Record<string, unknown>; method: string }> =
+    [];
   failure: Error | null = null;
 
+  create(roomName: string, options: Record<string, unknown>): Promise<SeatReservation> {
+    return this.seat(roomName, options, 'create');
+  }
+
   joinOrCreate(roomName: string, options: Record<string, unknown>): Promise<SeatReservation> {
-    this.calls.push({ roomName, options });
+    return this.seat(roomName, options, 'joinOrCreate');
+  }
+
+  private seat(
+    roomName: string,
+    options: Record<string, unknown>,
+    method: string,
+  ): Promise<SeatReservation> {
+    this.calls.push({ roomName, options, method });
 
     if (this.failure) {
       return Promise.reject(this.failure);
@@ -55,6 +68,7 @@ describe('MatchmakingService', () => {
     expect(ticket.reservation).toBeDefined();
     expect(matchmaker.calls[0]).toEqual({
       roomName: 'ludo',
+      method: 'joinOrCreate',
       options: { gameMode: 'CLASSIC', maxPlayers: 4 },
     });
   });
@@ -69,6 +83,45 @@ describe('MatchmakingService', () => {
     await service.createTicket({ gameMode: 'CLASSIC', players: 2, name: '   ' });
 
     expect(matchmaker.calls[0].options).not.toHaveProperty('name');
+  });
+
+  describe('solo play', () => {
+    it('creates a private room so no stranger is dropped into a bot match', async () => {
+      await service.createTicket({ gameMode: 'CLASSIC', players: 4, bots: 3 });
+
+      expect(matchmaker.calls[0].method).toBe('create');
+      expect(matchmaker.calls[0].options).toMatchObject({ bots: 3, botDifficulty: 'HARD' });
+    });
+
+    it('defaults to a human match when no bots are asked for', async () => {
+      await service.createTicket({ gameMode: 'CLASSIC', players: 2 });
+
+      expect(matchmaker.calls[0].method).toBe('joinOrCreate');
+      expect(matchmaker.calls[0].options).not.toHaveProperty('bots');
+    });
+
+    it('passes the chosen difficulty through', async () => {
+      await service.createTicket({ gameMode: 'QUICK', players: 2, bots: 1, botDifficulty: 'EASY' });
+
+      expect(matchmaker.calls[0].options).toMatchObject({ botDifficulty: 'EASY' });
+    });
+
+    it('refuses more bots than there are free seats', async () => {
+      await expect(
+        service.createTicket({ gameMode: 'CLASSIC', players: 2, bots: 2 }),
+      ).rejects.toBeInstanceOf(RangeError);
+    });
+
+    it('refuses an unknown difficulty', async () => {
+      await expect(
+        service.createTicket({
+          gameMode: 'CLASSIC',
+          players: 2,
+          bots: 1,
+          botDifficulty: 'GOD' as never,
+        }),
+      ).rejects.toBeInstanceOf(RangeError);
+    });
   });
 
   it('looks a ticket up again by id', async () => {

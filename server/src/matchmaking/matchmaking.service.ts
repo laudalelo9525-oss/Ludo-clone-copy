@@ -4,6 +4,8 @@ import { ConfigService } from '@nestjs/config';
 import { type ColyseusConfig } from '../config/configuration';
 import { GameService } from '../game/game.service';
 import {
+  BOT_DIFFICULTIES,
+  type BotDifficulty,
   GAME_MODES,
   type CreateTicketRequest,
   type GameMode,
@@ -43,6 +45,8 @@ export class MatchmakingService {
   async createTicket(request: CreateTicketRequest): Promise<Ticket> {
     const gameMode = this.validateGameMode(request?.gameMode);
     const players = this.validatePlayerCount(request?.players);
+    const bots = this.validateBots(request?.bots, players);
+    const botDifficulty = this.validateDifficulty(request?.botDifficulty);
 
     this.pruneExpired();
 
@@ -59,11 +63,19 @@ export class MatchmakingService {
       // the player under a generated fallback and the lobby entry is lost.
       const name = this.sanitiseName(request?.name);
 
-      const seat = await this.matchmaker.joinOrCreate(GameService.LUDO_ROOM, {
+      const options = {
         gameMode,
         maxPlayers: players,
         ...(name ? { name } : {}),
-      });
+        ...(bots > 0 ? { bots, botDifficulty } : {}),
+      };
+
+      // A solo match gets its own room: joining a public one would drop a
+      // stranger into a game against bots the player asked for.
+      const seat =
+        bots > 0
+          ? await this.matchmaker.create(GameService.LUDO_ROOM, options)
+          : await this.matchmaker.joinOrCreate(GameService.LUDO_ROOM, options);
 
       ticket.status = TicketStatus.Found;
       ticket.roomId = seat.roomId;
@@ -96,6 +108,35 @@ export class MatchmakingService {
 
     const cleaned = value.trim().replace(/\s+/g, ' ').slice(0, NAME_MAX);
     return cleaned.length > 0 ? cleaned : undefined;
+  }
+
+  /** Bots fill seats the player did not want humans in. */
+  private validateBots(value: unknown, players: PlayerCount): number {
+    if (value === undefined || value === null) {
+      return 0;
+    }
+
+    if (typeof value !== 'number' || !Number.isInteger(value) || value < 0) {
+      throw new RangeError('bots must be a non-negative whole number.');
+    }
+
+    if (value > players - 1) {
+      throw new RangeError(`bots cannot exceed ${players - 1} for a ${players} player match.`);
+    }
+
+    return value;
+  }
+
+  private validateDifficulty(value: unknown): BotDifficulty {
+    if (value === undefined || value === null) {
+      return 'HARD';
+    }
+
+    if (typeof value === 'string' && (BOT_DIFFICULTIES as readonly string[]).includes(value)) {
+      return value as BotDifficulty;
+    }
+
+    throw new RangeError(`botDifficulty must be one of ${BOT_DIFFICULTIES.join(', ')}.`);
   }
 
   private validateGameMode(value: unknown): GameMode {

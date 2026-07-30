@@ -1,6 +1,6 @@
 import { type Client, Room } from '@colyseus/core';
 import { type PlayerColor } from '../rules/board';
-import { pickBotMove } from '../rules/bot';
+import { type BotDifficulty, pickBotMove } from '../rules/bot';
 import { SecureDiceRoller } from '../rules/dice';
 import { LudoMatch } from '../rules/ludo-match';
 import { type DiceRoller, GamePhase, type MoveResult } from '../rules/types';
@@ -15,6 +15,7 @@ import {
   type LudoStateType,
   type PlayerState,
   RoomStatus,
+  createBot,
   createPlayer,
 } from './ludo-state';
 
@@ -23,6 +24,10 @@ export interface LudoRoomOptions {
   maxPlayers?: number;
   /** How long a player has to act before the turn is auto-played, in ms. */
   turnTimeoutMs?: number;
+  /** AI opponents to seat alongside the human, for solo play (Issue 6.1). */
+  bots?: number;
+  /** How strongly those opponents play. */
+  botDifficulty?: BotDifficulty;
 }
 
 /** Something scheduled that can be cancelled; satisfied by Colyseus' Delayed. */
@@ -68,6 +73,7 @@ export class LudoRoom extends Room<LudoStateType> {
   private maxPlayers = DEFAULT_MAX_PLAYERS;
   private turnTimeoutMs = DEFAULT_TURN_TIMEOUT_MS;
   private turnTimer: ScheduledTask | null = null;
+  private botDifficulty: BotDifficulty = 'HARD';
 
   /** Consecutive auto-played turns, by session id. */
   private readonly missedTurns = new Map<string, number>();
@@ -83,6 +89,15 @@ export class LudoRoom extends Room<LudoStateType> {
     this.state.winnerSessionId = '';
     this.state.diceValue = 0;
 
+    // Solo play seats AI opponents up front, so the match starts as soon as
+    // the human arrives instead of waiting for people who are not coming.
+    const bots = Math.min(Math.max(options.bots ?? 0, 0), this.maxPlayers - 1);
+    this.botDifficulty = options.botDifficulty ?? 'HARD';
+
+    for (let seat = 1; seat <= bots; seat++) {
+      this.state.players.set(`bot-${seat}`, createBot(seat, `AI ${seat}`));
+    }
+
     this.onMessage(ClientMessage.RollDice, (client) => this.handleRollDice(client));
     this.onMessage(ClientMessage.MovePawn, (client, payload: MovePawnPayload) =>
       this.handleMovePawn(client, payload),
@@ -93,7 +108,8 @@ export class LudoRoom extends Room<LudoStateType> {
   }
 
   override onJoin(client: Client, options: { name?: string } = {}): void {
-    const seat = this.state.players.size;
+    // Bots hold the seats after the first, so a human always takes seat 0.
+    const seat = this.hasBots ? 0 : this.state.players.size;
     const player = createPlayer(client.sessionId, seat, options.name ?? `Player ${seat + 1}`);
     this.state.players.set(client.sessionId, player);
 
@@ -139,6 +155,11 @@ export class LudoRoom extends Room<LudoStateType> {
   override onDispose(): void {
     this.turnTimer?.clear();
     this.turnTimer = null;
+  }
+
+  /** True when this room was created for solo play. */
+  private get hasBots(): boolean {
+    return [...this.state.players.values()].some((player) => player.isBot);
   }
 
   /** Seats in join order, which is also the turn order. */
@@ -279,7 +300,7 @@ export class LudoRoom extends Room<LudoStateType> {
       return;
     }
 
-    const takenOver = !player.connected || player.afk;
+    const takenOver = player.isBot || !player.connected || player.afk;
     const delay = takenOver ? BOT_ACTION_DELAY_MS : this.turnTimeoutMs;
 
     this.turnTimer = this.schedule(() => {
@@ -322,7 +343,12 @@ export class LudoRoom extends Room<LudoStateType> {
       match.state.phase === GamePhase.WaitingForMove &&
       this.state.currentTurnSessionId === sessionId
     ) {
-      const move = pickBotMove(match.state, match.state.currentPlayerIndex, match.legalMoves);
+      const move = pickBotMove(
+        match.state,
+        match.state.currentPlayerIndex,
+        match.legalMoves,
+        this.botDifficulty,
+      );
       this.applyMove(sessionId, move.pawnIndex, true);
     }
 

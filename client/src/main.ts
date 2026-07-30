@@ -14,14 +14,20 @@ import { buzz, flash } from './game/effects';
 import { dieFace, pawnPiece } from './game/pieces';
 import { LudoClient, type LudoClientEvents } from './net/ludo-client';
 import { MatchmakingApi } from './net/matchmaking';
-import { type LobbyChoice, isValidChoice, lobbyHtml, normaliseName } from './ui/lobby';
+import { type LobbyChoice, botCount, isValidChoice, lobbyHtml, normaliseName } from './ui/lobby';
 
 const SEAT_COLOURS = ['#e5484d', '#30a46c', '#f5d90a', '#0090ff'] as const;
 const SEAT_SHADES = ['#c1272d', '#1d7a4c', '#c9a800', '#0066cc'] as const;
 
 const client = new LudoClient(config.colyseusUrl);
 const matchmaking = new MatchmakingApi(config.restBaseUrl);
-let choice: LobbyChoice = { name: '', gameMode: 'CLASSIC', players: 2 };
+let choice: LobbyChoice = {
+  name: '',
+  gameMode: 'CLASSIC',
+  players: 2,
+  solo: false,
+  botDifficulty: 'HARD',
+};
 let searching = false;
 let inMatch = false;
 let view: MatchView | null = null;
@@ -286,6 +292,20 @@ function renderLobby(root: HTMLElement): void {
     });
   });
 
+  root.querySelectorAll<HTMLElement>('.opponent').forEach((button) => {
+    button.addEventListener('click', () => {
+      choice = { ...choice, solo: button.dataset.solo === '1' };
+      renderLobby(root);
+    });
+  });
+
+  root.querySelectorAll<HTMLElement>('.level').forEach((button) => {
+    button.addEventListener('click', () => {
+      choice = { ...choice, botDifficulty: button.dataset.level as LobbyChoice['botDifficulty'] };
+      renderLobby(root);
+    });
+  });
+
   root.querySelectorAll<HTMLElement>('.seats').forEach((button) => {
     button.addEventListener('click', () => {
       choice = { ...choice, players: Number(button.dataset.seats) as LobbyChoice['players'] };
@@ -311,7 +331,13 @@ async function startMatch(root: HTMLElement): Promise<void> {
   renderLobby(root);
 
   try {
-    const ticket = await matchmaking.requestMatch(choice.gameMode, choice.players, choice.name);
+    const bots = botCount(choice);
+    const ticket = await matchmaking.requestMatch({
+      gameMode: choice.gameMode,
+      players: choice.players,
+      name: choice.name,
+      ...(bots > 0 ? { bots, botDifficulty: choice.botDifficulty } : {}),
+    });
 
     if (ticket.status !== 'FOUND' || !ticket.reservation) {
       throw new Error(ticket.error ?? 'No seat was available.');
