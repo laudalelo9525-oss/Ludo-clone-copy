@@ -9,6 +9,7 @@ import {
   yardCorner,
 } from './game/board-geometry';
 import { type MatchView, isMyTurn, pawnSprites, statusLine } from './game/match-view';
+import { isMuted, play, toggleMute } from './game/audio';
 import { buzz, flash } from './game/effects';
 import { dieFace, pawnPiece } from './game/pieces';
 import { LudoClient } from './net/ludo-client';
@@ -140,10 +141,35 @@ function controlsHtml(): string {
   const awaitingMove = myTurn && (view?.diceValue ?? 0) > 0 && movable.length > 0;
 
   return `
-    ${dieFace(view?.diceValue ?? 0)}
+    <span class="die-slot">${dieFace(view?.diceValue ?? 0)}</span>
     <button id="roll" ${myTurn && !awaitingMove ? '' : 'disabled'}>
       ${awaitingMove ? 'Tap a pawn' : 'Roll'}
+    </button>
+    <button id="mute" class="icon" aria-label="${isMuted() ? 'Unmute' : 'Mute'}">
+      ${isMuted() ? '🔇' : '🔊'}
     </button>`;
+}
+
+/**
+ * Tumbles the die through random faces before the real value lands, so a roll
+ * reads as a roll. The final face always comes from the server.
+ */
+function tumbleDie(root: HTMLElement, finalValue: number): void {
+  const slot = root.querySelector('.die-slot');
+  if (!slot) {
+    return;
+  }
+
+  let ticks = 0;
+  const spin = window.setInterval(() => {
+    slot.innerHTML = dieFace(1 + Math.floor(Math.random() * 6));
+    if (++ticks >= 6) {
+      window.clearInterval(spin);
+      slot.innerHTML = dieFace(finalValue);
+      slot.classList.add('landed');
+      window.setTimeout(() => slot.classList.remove('landed'), 300);
+    }
+  }, 55);
 }
 
 /** Pawns the server will accept a move for are tappable. */
@@ -170,8 +196,21 @@ function render(root: HTMLElement): void {
     </main>
   `;
 
-  root.querySelector('#roll')?.addEventListener('click', () => client.roll());
+  bindControls(root);
   bindPawns(root);
+}
+
+/** Wires the roll and mute buttons. */
+function bindControls(root: HTMLElement): void {
+  root.querySelector('#roll')?.addEventListener('click', () => {
+    play('roll');
+    client.roll();
+  });
+
+  root.querySelector('#mute')?.addEventListener('click', () => {
+    toggleMute();
+    refreshControls(root);
+  });
 }
 
 /**
@@ -221,7 +260,7 @@ function refreshControls(root: HTMLElement): void {
   const controls = root.querySelector('.controls');
   if (controls) {
     controls.innerHTML = controlsHtml();
-    controls.querySelector('#roll')?.addEventListener('click', () => client.roll());
+    bindControls(root);
   }
 }
 
@@ -250,10 +289,16 @@ if (root) {
 
         if (next.status === 'FINISHED') {
           flash(root.querySelector('.board'), 'win');
+          play('win');
           buzz([0, 80, 80, 80, 80, 160]);
         }
       },
       onDiceRolled: (event) => {
+        tumbleDie(root, event.value);
+        if (event.player !== client.sessionId) {
+          play('roll');
+        }
+
         // The server decides which pawns are legal; the client only highlights.
         movable = event.player === client.sessionId ? event.movablePawns : [];
         movePawnsInPlace(root);
@@ -269,6 +314,8 @@ if (root) {
           }
         }
 
+        play(event.captures.length > 0 ? 'capture' : 'move');
+
         if (event.captures.length > 0) {
           buzz([0, 40, 60, 40]);
         }
@@ -276,6 +323,7 @@ if (root) {
         const mover = view?.players.find((player) => player.sessionId === event.player);
         if (mover && event.newPosition === 57) {
           flash(root.querySelector(`#pawn-${mover.seat}-${event.pawnIndex}`), 'home');
+          play('home');
         }
       },
       onRejected: (event) => {

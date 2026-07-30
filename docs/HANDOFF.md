@@ -70,6 +70,11 @@ point two pages at the preview server.
 
 ## Verified in a browser
 
+**Sound and dice tumble**: a full match with 217 oscillator starts per client,
+all six die faces observed mid-roll plus the blank face, and a working mute
+toggle. Chromium needs `--autoplay-policy=no-user-gesture-required` to make
+audio testable without a real tap.
+
 **Effects** (capture flash, home pop, win glow): a full match played to a
 winner with the effect classes appearing 70+ times on both clients. Note the
 instrument: a `MutationObserver` on `documentElement` reported zero and was
@@ -115,12 +120,12 @@ cd client && npm run dev      # then open the printed URL on the phone
 4. **Issue 4.1 — LiveKit token generation.** Server-side and self-contained;
    needs LiveKit credentials eventually, but the token endpoint can be built
    and tested against fixtures first.
-5. **Polish the match loop.** Issue 3.3 is done — a match is playable end to
-   end from the browser. The next increments, in order of payoff: pawn move
-   animation and a dice roll animation (Issues 2.1/2.3), tapping a pawn on the
-   board instead of the numbered buttons, automatic reconnection using the
-   room's reconnection token (the client currently asks the player to reload),
-   and a lobby with mode selection wired to the matchmaking ticket endpoint.
+5. **Polish the match loop.** Pieces, dice tumble, motion, tap-to-move,
+   capture/home/win feedback and sound are all done and verified in a browser.
+   What is left: a lobby with mode selection wired to the matchmaking ticket
+   endpoint, automatic reconnection using the room's reconnection token (the
+   client currently asks the player to reload), and offline play against the
+   AI (Issue 6.1, needs redoing in TypeScript).
 
 ## Known gaps worth remembering
 
