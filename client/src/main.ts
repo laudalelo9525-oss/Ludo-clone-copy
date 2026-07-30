@@ -9,6 +9,7 @@ import {
   yardCorner,
 } from './game/board-geometry';
 import { type MatchView, isMyTurn, pawnSprites, statusLine } from './game/match-view';
+import { buzz, flash } from './game/effects';
 import { dieFace, pawnPiece } from './game/pieces';
 import { LudoClient } from './net/ludo-client';
 
@@ -246,12 +247,36 @@ if (root) {
         } else {
           refreshControls(root);
         }
+
+        if (next.status === 'FINISHED') {
+          flash(root.querySelector('.board'), 'win');
+          buzz([0, 80, 80, 80, 80, 160]);
+        }
       },
       onDiceRolled: (event) => {
         // The server decides which pawns are legal; the client only highlights.
         movable = event.player === client.sessionId ? event.movablePawns : [];
         movePawnsInPlace(root);
         refreshControls(root);
+      },
+      onPawnMoved: (event) => {
+        // Captures and arrivals are announced by the server, so every client
+        // reacts to the same events rather than guessing from state diffs.
+        for (const capture of event.captures) {
+          const victim = view?.players.find((player) => player.sessionId === capture.player);
+          if (victim) {
+            flash(root.querySelector(`#pawn-${victim.seat}-${capture.pawnIndex}`), 'capture');
+          }
+        }
+
+        if (event.captures.length > 0) {
+          buzz([0, 40, 60, 40]);
+        }
+
+        const mover = view?.players.find((player) => player.sessionId === event.player);
+        if (mover && event.newPosition === 57) {
+          flash(root.querySelector(`#pawn-${mover.seat}-${event.pawnIndex}`), 'home');
+        }
       },
       onRejected: (event) => {
         notice = event.reason;

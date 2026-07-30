@@ -4,6 +4,7 @@ import {
   ClientMessage,
   type DiceRolledEvent,
   LUDO_ROOM,
+  type PawnMovedEvent,
   type RejectedEvent,
   ServerMessage,
 } from './protocol';
@@ -13,6 +14,8 @@ export interface LudoClientEvents {
   onState(view: MatchView): void;
   /** A die was rolled — carries which pawns the server will accept a move for. */
   onDiceRolled?(event: DiceRolledEvent): void;
+  /** A pawn moved — carries any pawns it knocked back to their yard. */
+  onPawnMoved?(event: PawnMovedEvent): void;
   /** The server refused something this client asked for. */
   onRejected?(event: RejectedEvent): void;
   /** The connection dropped; the seat is held briefly for a reconnect. */
@@ -51,11 +54,14 @@ export class LudoClient {
       events.onDiceRolled?.(event);
     });
 
+    room.onMessage(ServerMessage.PawnMoved, (event: PawnMovedEvent) => {
+      events.onPawnMoved?.(event);
+    });
+
     // Every other server message is already reflected in the synced state;
     // they are registered so the SDK does not warn about unhandled types, and
     // so animation can hook them without changing this class.
     for (const type of [
-      ServerMessage.PawnMoved,
       ServerMessage.TurnChanged,
       ServerMessage.EmoteReceived,
       ServerMessage.PlayerAfk,

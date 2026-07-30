@@ -252,3 +252,62 @@ button:disabled {
     animation: none;
   }
 }
+
+/* --- Transient feedback --------------------------------------------- */
+.fx-capture {
+  animation: capture 700ms ease-out;
+}
+
+@keyframes capture {
+  0% {
+    filter: brightness(1);
+  }
+  25% {
+    filter: brightness(2.2) drop-shadow(0 0 0.3rem #fff);
+  }
+  100% {
+    filter: brightness(1);
+  }
+}
+
+.fx-home {
+  animation: home 900ms cubic-bezier(0.34, 1.4, 0.64, 1);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes home {
+  0% {
+    scale: 1;
+  }
+  40% {
+    scale: 1.5;
+  }
+  100% {
+    scale: 1;
+  }
+}
+
+.board.fx-win {
+  animation: win 1600ms ease-in-out;
+}
+
+@keyframes win {
+  0%,
+  100% {
+    box-shadow: 0 1.5rem 3rem rgba(0, 0, 0, 0.45);
+  }
+  50% {
+    box-shadow:
+      0 0 2.5rem rgba(255, 215, 0, 0.85),
+      0 1.5rem 3rem rgba(0, 0, 0, 0.45);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fx-capture,
+  .fx-home,
+  .board.fx-win {
+    animation: none;
+  }
+}

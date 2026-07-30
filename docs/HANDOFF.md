@@ -68,6 +68,13 @@ removed again, to keep `npm ci` light on a phone. To repeat it: install
 `executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome'`, and
 point two pages at the preview server.
 
+## Verified in a browser
+
+**Effects** (capture flash, home pop, win glow): a full match played to a
+winner with the effect classes appearing 70+ times on both clients. Note the
+instrument: a `MutationObserver` on `documentElement` reported zero and was
+wrong — poll for `[class*="fx-"]` instead, which is what proved them working.
+
 ## Tap-to-move — verified in a browser
 
 Confirmed on a clean run at phone size: two players seated, eight pawns drawn,
