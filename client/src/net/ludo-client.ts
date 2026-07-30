@@ -1,10 +1,18 @@
 import { Client, type Room } from 'colyseus.js';
 import { type MatchView, type PlayerView } from '../game/match-view';
-import { ClientMessage, LUDO_ROOM, ServerMessage, type RejectedEvent } from './protocol';
+import {
+  ClientMessage,
+  type DiceRolledEvent,
+  LUDO_ROOM,
+  type RejectedEvent,
+  ServerMessage,
+} from './protocol';
 
 export interface LudoClientEvents {
   /** Fires on every state change, with a plain snapshot. */
   onState(view: MatchView): void;
+  /** A die was rolled — carries which pawns the server will accept a move for. */
+  onDiceRolled?(event: DiceRolledEvent): void;
   /** The server refused something this client asked for. */
   onRejected?(event: RejectedEvent): void;
   /** The connection dropped; the seat is held briefly for a reconnect. */
@@ -39,11 +47,14 @@ export class LudoClient {
       events.onRejected?.(event);
     });
 
+    room.onMessage(ServerMessage.DiceRolled, (event: DiceRolledEvent) => {
+      events.onDiceRolled?.(event);
+    });
+
     // Every other server message is already reflected in the synced state;
     // they are registered so the SDK does not warn about unhandled types, and
     // so animation can hook them without changing this class.
     for (const type of [
-      ServerMessage.DiceRolled,
       ServerMessage.PawnMoved,
       ServerMessage.TurnChanged,
       ServerMessage.EmoteReceived,

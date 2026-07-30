@@ -169,3 +169,86 @@ button:disabled {
   flex: 0 0 auto;
   filter: drop-shadow(0 0.35rem 0.5rem rgba(0, 0, 0, 0.45));
 }
+
+/* --- Board surface -------------------------------------------------- */
+.board-bg {
+  fill: #ffffff;
+  stroke: #d7dbe8;
+  stroke-width: 0.06;
+}
+
+.yard {
+  stroke: rgba(15, 16, 32, 0.35);
+  stroke-width: 0.05;
+}
+
+/* --- Player panel --------------------------------------------------- */
+.players {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin: 0.25rem 0 0.6rem;
+}
+
+.player {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  backdrop-filter: blur(8px);
+  font-size: 0.8rem;
+  opacity: 0.6;
+  transition: opacity 200ms ease, box-shadow 200ms ease, transform 200ms ease;
+}
+
+.player.active {
+  opacity: 1;
+  transform: translateY(-1px);
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.7);
+}
+
+.chip {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  box-shadow: 0 0 0.4rem currentColor;
+}
+
+.tag {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.75;
+}
+
+/* --- Pawn interaction ----------------------------------------------- */
+.pawn.movable {
+  cursor: pointer;
+  animation: bob 900ms ease-in-out infinite;
+}
+
+.pawn.movable .pawn-shadow {
+  fill: rgba(15, 16, 32, 0.4);
+}
+
+@keyframes bob {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -0.13px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pawn,
+  .pawn.movable {
+    transition: none;
+    animation: none;
+  }
+}
